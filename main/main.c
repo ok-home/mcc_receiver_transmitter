@@ -127,17 +127,18 @@ void rmt_mcc_tx_task(void*p)
     while(1)
     {
             gpio_set_level(5, 1);
-            ESP_ERROR_CHECK(rmt_transmit(tx_chan_handle, tx_encoder, rmt_word, sizeof(rmt_word), &rmt_tx_config));
+            ESP_ERROR_CHECK(rmt_transmit(tx_chan_handle, tx_encoder, &rmt_word, sizeof(rmt_word), &rmt_tx_config));
             rmt_tx_wait_all_done(tx_chan_handle, portMAX_DELAY);
             gpio_set_level(5, 0);            
             vTaskDelay(1);
     }
 
 }
-
+#include "logic_analyzer_ws_server.h"
 void app_main(void)
 {
     gpio_reset_pin(5);
-    gpio_set_direction(5, GPIO_MODE_OUTPUT)
+    gpio_set_direction(5, GPIO_MODE_OUTPUT);
+    logic_analyzer_ws_server();
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 }

@@ -1,4 +1,4 @@
-#include "rmt_types.h"
+#include "driver/rmt_types.h"
 
 #define RMT_BIT_WIDTH (1667)
 #define RMT_TX_CLK  (80*1000*1000)

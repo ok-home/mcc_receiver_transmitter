@@ -1,3 +1,4 @@
+#include <stdint.h>
 //0-36
 const uint16_t miles[37] = 
  {
