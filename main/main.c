@@ -22,6 +22,7 @@
 */
 
 #include "mcc_encoder.h"
+#include "maps.c"
 
 static const char *TAG = "MCC TEST";
 
@@ -44,13 +45,13 @@ void rmt_mcc_tx_init(void){
     ESP_ERROR_CHECK(rmt_new_copy_encoder(&tx_encoder_config, &tx_encoder));
     ESP_ERROR_CHECK(rmt_enable(tx_chan_handle));
 }
-uint16_t mcc_get_miles_code( uint16_t miles)
+uint16_t mcc_get_miles_code( uint16_t mil)
 {
-    return 0x26b;   //010 0110 1011
+    return miles[mil];   //010 0110 1011
 }
-uint16_t mcc_get_spid_code (uint16_t spid)
+uint16_t mcc_get_spid_code (uint16_t spi)
 {
-    return 0x407;   //100 0000 0111
+    return spid[spi-1];   //100 0000 0111
 }
 void rmt_mcc_word_encode(mcc_code_word_t* tst_word, rmt_mcc_word_t* rmt_word){
     // clear all bits
