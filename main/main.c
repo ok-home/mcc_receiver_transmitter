@@ -34,7 +34,7 @@ void rmt_mcc_tx_init(void){
  rmt_tx_channel_config_t tx_chan_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT, // select source clock
         .gpio_num = RMT_TX_PIN,
-        .mem_block_symbols = TX_BLOCK_SYMBOL, //for esp32c3 !!!!!!! esp32s -> 64 !!!!!!! // 16*2 bit = 32 bit
+        .mem_block_symbols = TX_BLOCK_SYMBOL, //for esp32c3 48 !!!!!!! esp32s -> 64 !!!!!!! 
         .flags.invert_out = false,
         .resolution_hz = RMT_TX_CLK,
         .trans_queue_depth = 5, // set the maximum number of transactions that can pend in the background
@@ -119,18 +119,25 @@ void rmt_mcc_tx_task(void*p)
         .y_mod = 1,
         .z_mod = 0xA
     };
+    rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
         .loop_count = 0,
     };
     rmt_mcc_word_encode(&tst_word,&rmt_word);
     while(1)
     {
-
+            gpio_set_level(5, 1);
+            ESP_ERROR_CHECK(rmt_transmit(tx_chan_handle, tx_encoder, rmt_word, sizeof(rmt_word), &rmt_tx_config));
+            rmt_tx_wait_all_done(tx_chan_handle, portMAX_DELAY);
+            gpio_set_level(5, 0);            
+            vTaskDelay(1);
     }
 
 }
 
 void app_main(void)
 {
-     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
+    gpio_reset_pin(5);
+    gpio_set_direction(5, GPIO_MODE_OUTPUT)
+    xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 }
