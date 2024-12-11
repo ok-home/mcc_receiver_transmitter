@@ -81,17 +81,28 @@ uint32_t decode_channel(uint32_t channel,uint16_t *ptr)
 {
    uint16_t bit_mask = 0;
    bit_mask = 1<<channel;
-   uint16_t *mem_ptr = channel_array[channel].decode_bit_offset;
-   if(ptr <= mem_ptr) return -1; // already decoded
-   if(*mem_ptr&bit_mask == 0){
+   uint16_t *mem_ptr = ptr;//channel_array[channel].decode_bit_offset;
+   if(ptr <= channel_array[channel].decode_bit_offset) return -1; // already decoded
+   if((*mem_ptr&bit_mask) == 0){
       channel_array[channel].decode_bit_offset = ptr;
       return -1; // not found
-   } 
-   uint32_t bit = (mem_ptr[0]>>channel)&1+(mem_ptr[1]>>channel)&1+(mem_ptr[2]>>channel)&1;
+   }
    uint32_t word = 0;
-   if(bit>0) {word |= 1<<11;} else
+   // miles
+   for(int i=0; i<11 ; i++) 
+   {
+      uint32_t bit = ((mem_ptr[(TIME_SLOT_SIZE*i)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2]>>channel)&1);
+      if ( bit>1) 
+      {
+         word |= 1<<11;
+      }
+      word >>=1;
+   }
+   printf("miles m=%x\n",word);
+   if( (word & 0x7) != 3) return -1;
+   printf("found miles %x\n",word);
    
-    
+   channel_array[channel].decode_bit_offset = mem_ptr+MCC_WORD_SIZE;
 }
 
 #endif
