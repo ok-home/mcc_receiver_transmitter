@@ -75,10 +75,18 @@ typedef struct decode {
    uint32_t decode_channel;
 } decode_t;
 
+typedef struct bit_position {
+   uint8_t bit0:1;
+   uint8_t bit6:1;
+   uint8_t bit8:1;
+   uint8_t bit10:1;
+} bit_position_t;
+
 decode_t channel_array[4] = {0};
 
 uint32_t decode_channel(uint32_t channel,uint16_t *ptr)
 {
+   bit_position_t bp[11] = {0};
    uint16_t bit_mask = 0;
    bit_mask = 1<<channel;
    uint16_t *mem_ptr = ptr;//channel_array[channel].decode_bit_offset;
@@ -87,20 +95,49 @@ uint32_t decode_channel(uint32_t channel,uint16_t *ptr)
       channel_array[channel].decode_bit_offset = ptr;
       return -1; // not found
    }
-   uint32_t word = 0;
+   uint32_t miles = 0;
+   uint32_t spid = 0;
    // miles
    for(int i=0; i<11 ; i++) 
    {
-      uint32_t bit = ((mem_ptr[(TIME_SLOT_SIZE*i)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2]>>channel)&1);
-      if ( bit>1) 
+      uint32_t bit0 = ((mem_ptr[(TIME_SLOT_SIZE*i)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2]>>channel)&1);
+      if ( bit0 > 1) 
       {
-         word |= 1<<11;
+        bp[i].bit0=1;
+         miles |= 1<<11;
       }
-      word >>=1;
+      miles >>=1;
+
+      uint32_t bit6 = ((mem_ptr[(TIME_SLOT_SIZE*i)+(BIN_SIZE*6)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1+(BIN_SIZE*6)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2+(BIN_SIZE*6)]>>channel)&1);
+      uint32_t bit8 = ((mem_ptr[(TIME_SLOT_SIZE*i)+(BIN_SIZE*8)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1+(BIN_SIZE*8)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2+(BIN_SIZE*8)]>>channel)&1);
+      uint32_t bit10 = ((mem_ptr[(TIME_SLOT_SIZE*i)+(BIN_SIZE*10)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1+(BIN_SIZE*10)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2+(BIN_SIZE*10)]>>channel)&1);
+
+      if ( bit6 > 1) 
+      {
+        bp[i].bit6=1;
+      }
+      if ( bit8 > 1) 
+      {
+        bp[i].bit8=1;
+      }
+      if ( bit10 > 1) 
+      {
+        bp[i].bit10=1;
+      }
+    if(bp[i].bit6 || bp[i].bit8 || bp[i].bit10)
+    {
+        spid |= 1<<11;
+    }
+        spid >>=1;
+
+//    printf("i=%d bit0 %d bit6 %d bit8 %d bit10 %d\n",i,bp[i].bit0,bp[i].bit6,bp[i].bit8,bp[i].bit10);
    }
-   printf("miles m=%x\n",word);
-   if( (word & 0x7) != 3) return -1;
-   printf("found miles %x\n",word);
+   printf("miles =%x spid = %x\n",miles,spid);
+   if( (miles & 0x7) != 3) return -1;
+//check miles
+//
+//   
+   printf("found miles %x\n",miles);
    
    channel_array[channel].decode_bit_offset = mem_ptr+MCC_WORD_SIZE;
 }
