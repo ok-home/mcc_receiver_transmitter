@@ -1,3 +1,4 @@
+#pragma once
 #include "driver/rmt_types.h"
 
 #define RMT_BIT_WIDTH (1667)

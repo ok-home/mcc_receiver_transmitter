@@ -1,4 +1,7 @@
 #include <stdint.h>
+#include <stdio.h>
+#include "esp_timer.h"
+#include "mcc_encoder.h"
 //0-36
 const uint16_t miles[37] = 
  {
@@ -50,7 +53,7 @@ const uint16_t model[] =
    0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0,   0,0,0, //00
 };
 
-#if 0
+#if 1
 #define WIN_SIZE (3)
 #define BIN_SIZE (3)
 #define TIME_SLOT_SIZE (BIN_SIZE*16)
@@ -84,7 +87,7 @@ typedef struct bit_position {
 
 decode_t channel_array[4] = {0};
 
-uint32_t decode_channel(uint32_t channel,uint16_t *ptr)
+uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
 {
    bit_position_t bp[11] = {0};
    uint16_t bit_mask = 0;
@@ -132,14 +135,28 @@ uint32_t decode_channel(uint32_t channel,uint16_t *ptr)
 
 //    printf("i=%d bit0 %d bit6 %d bit8 %d bit10 %d\n",i,bp[i].bit0,bp[i].bit6,bp[i].bit8,bp[i].bit10);
    }
-   printf("miles =%x spid = %x\n",miles,spid);
+   //printf("miles =%lx spid = %lx\n",miles,spid);
    if( (miles & 0x7) != 3) return -1;
 //check miles
 //
 //   
-   printf("found miles %x\n",miles);
+   //printf("found miles %lx\n",miles);
    
    channel_array[channel].decode_bit_offset = mem_ptr+MCC_WORD_SIZE;
+   return 0;
+
+}
+
+void test_time(void)
+{
+   uint64_t t0 = esp_timer_get_time();
+   for(int i=0;i<16;i++)
+   {
+      decode_channel(0,&model[48]);
+   }
+   uint64_t t1 = esp_timer_get_time();
+   printf("time %llu\n",t1-t0);
+
 }
 
 #endif
