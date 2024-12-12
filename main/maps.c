@@ -246,7 +246,7 @@ uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
 //    printf("i=%d bit0 %d bit6 %d bit8 %d bit10 %d\n",i,bp[i].bit0,bp[i].bit6,bp[i].bit8,bp[i].bit10);
    }
    yz_mode = (y_mode<<4) | z_mode ;
-   printf("miles =%lx yz=%x spid = %lx\n",miles,yz_mode,spid,);
+   //printf("miles =%lx yz=%x spid = %lx\n",miles,yz_mode,spid);
 
    
    id_code_t code_miles = {0,miles};
@@ -254,11 +254,11 @@ uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
    id_code_t *id_miles = (id_code_t*)bsearch(&code_miles,miles_code_sort,38,sizeof(id_code_t),id_code_compare);
    id_code_t *id_spid = (id_code_t*)bsearch(&code_spid,spid_code_sort,331,sizeof(id_code_t),id_code_compare);
    if(id_miles !=0 && id_spid !=0){
-        printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,yz_mode,id_spid->id);
+        //printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,yz_mode,id_spid->id);
     }
     else {printf("not found\n"); return -1;}
 
-   printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,yz_mode,id_spid->id);
+   //printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,yz_mode,id_spid->id);
 
 
    if( (miles & 0x7) != 3) return -1;
