@@ -78,18 +78,13 @@ typedef struct decode {
    uint32_t decode_channel;
 } decode_t;
 
-typedef struct bit_position {
-   uint8_t bit0:1;
-   uint8_t bit6:1;
-   uint8_t bit8:1;
-   uint8_t bit10:1;
-} bit_position_t;
-
 decode_t channel_array[4] = {0};
 
 uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
 {
-   bit_position_t bp[11] = {0};
+   uint8_t y_mode = 0;
+   uint8_t z_mode = 0;
+   uint8_t yz_mode = 0;
    uint16_t bit_mask = 0;
    bit_mask = 1<<channel;
    uint16_t *mem_ptr = ptr;//channel_array[channel].decode_bit_offset;
@@ -106,7 +101,6 @@ uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
       uint32_t bit0 = ((mem_ptr[(TIME_SLOT_SIZE*i)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2]>>channel)&1);
       if ( bit0 > 1) 
       {
-        bp[i].bit0=1;
          miles |= 1<<11;
       }
       miles >>=1;
@@ -115,27 +109,25 @@ uint32_t decode_channel(uint32_t channel,uint16_t const *ptr)
       uint32_t bit8 = ((mem_ptr[(TIME_SLOT_SIZE*i)+(BIN_SIZE*8)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1+(BIN_SIZE*8)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2+(BIN_SIZE*8)]>>channel)&1);
       uint32_t bit10 = ((mem_ptr[(TIME_SLOT_SIZE*i)+(BIN_SIZE*10)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+1+(BIN_SIZE*10)]>>channel)&1) + ((mem_ptr[(TIME_SLOT_SIZE*i)+2+(BIN_SIZE*10)]>>channel)&1);
 
-      if ( bit6 > 1) 
-      {
-        bp[i].bit6=1;
-      }
-      if ( bit8 > 1) 
-      {
-        bp[i].bit8=1;
-      }
-      if ( bit10 > 1) 
-      {
-        bp[i].bit10=1;
-      }
-    if(bp[i].bit6 || bp[i].bit8 || bp[i].bit10)
+      bit6 = bit6 > 1 ? 1:0;
+      bit8 = bit8 > 1 ? 1:0;
+      bit10 = bit10 > 1 ? 1:0;
+
+    if(bit6 || bit8 || bit10)
     {
+        y_mode <<= 1;
+        z_mode <<= 1;
+        y_mode |= bit6;
+        z_mode |= bit10;
+
         spid |= 1<<11;
     }
         spid >>=1;
 
 //    printf("i=%d bit0 %d bit6 %d bit8 %d bit10 %d\n",i,bp[i].bit0,bp[i].bit6,bp[i].bit8,bp[i].bit10);
    }
-   //printf("miles =%lx spid = %lx\n",miles,spid);
+   yz_mode = (y_mode<<4) | z_mode ;
+   //printf("miles =%lx yz=%x spid = %lx\n",miles,yz_mode,spid,);
    if( (miles & 0x7) != 3) return -1;
 //check miles
 //
