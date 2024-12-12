@@ -47,11 +47,11 @@ void rmt_mcc_tx_init(void){
 }
 uint16_t mcc_get_miles_code( uint16_t mil)
 {  // from 0 to 36
-    return miles[mil];   //010 0110 1011
+    return miles_id_sort[mil].code;   //010 0110 1011
 }
 uint16_t mcc_get_spid_code (uint16_t spi)
 { // from 1 to 330
-    return spid[spi];   //100 0000 0111
+    return spid_id_sort[spi].code;   //100 0000 0111
 }
 void rmt_mcc_word_encode(mcc_code_word_t* tst_word, rmt_mcc_word_t* rmt_word){
     // clear all bits
