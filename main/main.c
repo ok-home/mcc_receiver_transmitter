@@ -139,6 +139,9 @@ void app_main(void)
 {
     gpio_reset_pin(5);
     gpio_set_direction(5, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(6);
+    gpio_set_direction(6, GPIO_MODE_OUTPUT);
+
     logic_analyzer_ws_server();
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
     test_time();
