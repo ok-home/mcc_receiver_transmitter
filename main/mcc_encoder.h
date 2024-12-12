@@ -33,13 +33,11 @@ typedef struct rmt_mcc_word {
 typedef struct mcc_code_word {
         uint16_t miles;
         uint16_t spid;
-        uint8_t y_mod;
-        uint8_t z_mod;
+        uint8_t yz_mod;
 } mcc_code_word_t;
 
 typedef struct mcc_code_word_pattern {
         uint16_t miles;
         uint16_t spid;
-        uint8_t y_mod;
-        uint8_t z_mod;
+        uint8_t yz_mod;
 } mcc_code_word_pattern_t;

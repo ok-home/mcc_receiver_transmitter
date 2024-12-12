@@ -57,8 +57,8 @@ void rmt_mcc_word_encode(mcc_code_word_t* tst_word, rmt_mcc_word_t* rmt_word){
     // clear all bits
     uint16_t miles = mcc_get_miles_code(tst_word->miles);
     uint16_t spid = mcc_get_spid_code(tst_word->spid);
-    uint8_t y_mod = tst_word->y_mod;
-    uint8_t z_mod = tst_word->z_mod;
+    uint8_t y_mod = ((tst_word->yz_mod)>>4)&0xf;
+    uint8_t z_mod = (tst_word->yz_mod)&0xf;
     // set miles & clear spid
     for(int i=0;i<11;i++)
     {
@@ -116,8 +116,7 @@ void rmt_mcc_tx_task(void*p)
     mcc_code_word_t tst_word = {
         .miles = 12,
         .spid = 211,
-        .y_mod = 1,
-        .z_mod = 0xA
+        .yz_mod = 0x1A,
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
