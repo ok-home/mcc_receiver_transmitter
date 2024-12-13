@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "esp_timer.h"
+#include <string.h>
 #include "mcc_encoder.h"
 // 0-36
 const uint16_t miles[37] =
@@ -920,3 +921,108 @@ void test_time(void)
 }
 
 #endif
+typedef struct bins {
+   uint8_t bit0:1;
+   uint8_t bit6:1;
+   uint8_t bit8:1;
+   uint8_t bit10:1;
+   uint8_t bit_spare:4;
+}  bins_t;
+
+typedef struct channel_decode {
+   uint8_t started;
+   uint8_t cnt_bins;
+   uint8_t cnt_timeslots;
+   uint16_t miles;
+   uint16_t spid;
+   uint8_t y_mode;
+   uint8_t z_mode;
+   uint8_t yz_mode;
+   uint8_t cnt_last_bit;   //0-3
+   uint8_t last_bit;    //last 3 bit
+   bins_t mcc_word[11]; // [timeslot][bins]
+} channel_decode_t;
+
+channel_decode_t channel_data[16] = {0};
+
+void decode(uint8_t channel,uint8_t bit)
+{
+   channel_decode_t *data = &channel_data[channel];
+   if(data->started == 0 && bit==0) {return;}
+   else {data->started = true;} // first bit
+   data->last_bit += bit;
+   data->cnt_last_bit += 1;
+   if(data->cnt_last_bit >= 3)
+   {
+      uint8_t bit_val = data->last_bit > 1 ? 1 : 0;
+      switch (data->cnt_bins){
+         case 0:
+            data->mcc_word.bit0 = bit_val;
+            if(data->mcc_word.bit0){
+               data->miles |= 1<< 11;
+            }
+            data->miles >>= 1;
+            if(data->cnt_timeslots == 2) // check miles start 110
+               {
+                  if(data->miles>>8 != 3){
+                  // clear all 
+                  memset(data,0,sizeof(channel_decode_t));
+                  printf("clear miles = %d \n",data->miles);
+                  return;
+                  }
+               }
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins +=1;
+            break;
+         case 6:
+            data->mcc_word.bit6 = bit_val;
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins +=1;
+            break;
+         case 8:
+            data->mcc_word.bit8 = bit_val;
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins +=1;
+            break;
+         case 10:
+            data->mcc_word.bit10 = bit_val;
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins +=1;
+            break;
+         case 15:
+            if(data->mcc_word.bit6 || data->mcc_word.bit8 || data->mcc_word.bit10 ){
+               data->spid |= 1<<11;
+
+               data->y_mode <<= 1;
+               data->z_mode <<= 1;
+               data->y_mode |= data->mcc_word.bit6;
+               data->z_mode |= data->mcc_word.bit10;
+            }
+            data->spid >>= 1;
+
+            if(data->cnt_timeslots == 10) // all mcc word
+            {
+               data->yz_mode = (data->y_mode << 4) | data->z_mode;
+               printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
+            memset(data,0,sizeof(channel_decode_t));
+            return;
+            }
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins = 0;
+            data->cnt_timeslots +=1;
+            break;
+         default:
+            data->last_bit = 0;
+            data->cnt_last_bit = 0;
+            data->cnt_bins +=1;
+            break;
+
+      }
+
+   }
+}
