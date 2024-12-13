@@ -945,10 +945,10 @@ typedef struct channel_decode {
 
 channel_decode_t channel_data[16] = {0};
 
-void decode(uint8_t channel,uint8_t bit)
+int decode(uint8_t channel,uint8_t bit)
 {
    channel_decode_t *data = &channel_data[channel];
-   if(data->started == 0 && bit==0) {return;}
+   if(data->started == 0 && bit==0) {return 0;}
    else {data->started = true;} // first bit
    data->last_bit += bit;
    data->cnt_last_bit += 1;
@@ -968,7 +968,7 @@ void decode(uint8_t channel,uint8_t bit)
                   // clear all 
                   memset(data,0,sizeof(channel_decode_t));
                   printf("clear miles = %d \n",data->miles);
-                  return;
+                  return -1;
                   }
                }
             data->last_bit = 0;
@@ -1008,8 +1008,17 @@ void decode(uint8_t channel,uint8_t bit)
             {
                data->yz_mode = (data->y_mode << 4) | data->z_mode;
                printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
-            memset(data,0,sizeof(channel_decode_t));
-            return;
+            
+               id_code_t code_miles = {0, data->miles};
+               id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
+
+               id_code_t code_spid = {0, data->spid};
+               id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_code_sort, 331, sizeof(id_code_t), id_code_compare);
+
+                printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,data->yz_mode,id_spid->id);
+
+                memset(data,0,sizeof(channel_decode_t));
+                return 0;
             }
             data->last_bit = 0;
             data->cnt_last_bit = 0;
@@ -1025,4 +1034,5 @@ void decode(uint8_t channel,uint8_t bit)
       }
 
    }
+   return 0;
 }
