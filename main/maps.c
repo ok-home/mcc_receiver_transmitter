@@ -1,9 +1,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "esp_timer.h"
 #include <string.h>
 #include "mcc_encoder.h"
+#include "logic_analyzer_hal.h"
 // 0-36
 const uint16_t miles[37] =
     {
@@ -904,21 +908,7 @@ uint32_t decode_channel(uint32_t channel, uint16_t const *ptr)
    return 0;
 }
 
-void test_time(void)
-{
-   uint64_t t0 = esp_timer_get_time();
-   for (int j = 0; j < 2; j++)
-   {
-         channel_array[0].decode_bit_offset = NULL;
 
-      for (int i = 0; i < 1280; i++)
-      {
-         decode_channel(0, &model[i]);
-      }
-   }
-      uint64_t t1 = esp_timer_get_time();
-         printf("time %llu\n", t1 - t0);
-}
 
 #endif
 typedef struct bins {
@@ -940,7 +930,7 @@ typedef struct channel_decode {
    uint8_t yz_mode;
    uint8_t cnt_last_bit;   //0-3
    uint8_t last_bit;    //last 3 bit
-   bins_t mcc_word[11]; // [timeslot][bins]
+   bins_t mcc_word; // [timeslot][bins]
 } channel_decode_t;
 
 channel_decode_t channel_data[16] = {0};
@@ -1007,7 +997,7 @@ int decode(uint8_t channel,uint8_t bit)
             if(data->cnt_timeslots == 10) // all mcc word
             {
                data->yz_mode = (data->y_mode << 4) | data->z_mode;
-               printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
+//               printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
             
                id_code_t code_miles = {0, data->miles};
                id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
@@ -1015,7 +1005,10 @@ int decode(uint8_t channel,uint8_t bit)
                id_code_t code_spid = {0, data->spid};
                id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_code_sort, 331, sizeof(id_code_t), id_code_compare);
 
+            if(id_miles && id_spid){
                 printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,data->yz_mode,id_spid->id);
+            }
+            else {printf("not found\n");}
 
                 memset(data,0,sizeof(channel_decode_t));
                 return 0;
@@ -1035,4 +1028,72 @@ int decode(uint8_t channel,uint8_t bit)
 
    }
    return 0;
+}
+
+
+void mcc_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
+{
+   printf("samples=%d sample_rate=%d channels=%d\n",samples,sample_rate,channels);
+   uint16_t *samle_buf16 = (uint16_t *)samle_buf;
+   if(samples){
+   for (int i = 0; i < samples; i++)
+   {
+         //decode(0, samle_buf16[i] & (1));
+         decode_channel(0, &samle_buf16[i]);
+         //printf("%x\n",samle_buf16[i]& (1));
+   }
+   }
+   printf("end\n");
+
+
+}
+
+logic_analyzer_config_t config ={
+   .pin[0] = 4,
+   .pin[1] = 5,
+   .pin[2] = 6,
+   .pin_trigger=-1,
+   .trigger_edge=1,
+   .number_channels=16,
+   .sample_rate=144000,
+   .meashure_timeout=20,
+   .number_of_samples=20000,
+   .samples_to_psram=0,
+   .logic_analyzer_cb=mcc_cb
+};
+#include "esp_heap_caps.h"
+void test_time(void)
+{
+/*   uint64_t t0 = esp_timer_get_time();
+   for (int j = 0; j < 2; j++)
+   {
+         channel_array[0].decode_bit_offset = NULL;
+
+      for (int i = 0; i < sizeof(model)/2-MCC_WORD_SIZE; i++)
+      {
+         decode_channel(0, &model[i]);
+      }
+   }
+      uint64_t t1 = esp_timer_get_time();
+         printf("time %llu\n", t1 - t0);
+
+   t0 = esp_timer_get_time();
+   for (int j = 0; j < 2; j++)
+   {
+      memset(channel_data,0,sizeof(channel_data));
+      for (int i = 0; i < sizeof(model)/2; i++)
+      {
+         decode(0, model[i]);
+      }
+   }
+      t1 = esp_timer_get_time();
+         printf("time %llu\n", t1 - t0);
+*/
+
+   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+   start_logic_analyzer(&config);
+   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+   vTaskDelay(1000);
+   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+
 }

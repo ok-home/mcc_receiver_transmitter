@@ -120,7 +120,7 @@ void rmt_mcc_tx_task(void*p)
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
-        .loop_count = 0,
+        .loop_count = 10,
     };
     rmt_mcc_word_encode(&tst_word,&rmt_word);
     while(1)
