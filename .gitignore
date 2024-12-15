@@ -1,6 +1,6 @@
 build/
 .vscode/
 .devcontainer/
-components/
+components__/
 sdkconfig
 sdkconfig.old

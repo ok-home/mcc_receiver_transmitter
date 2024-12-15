@@ -938,13 +938,17 @@ channel_decode_t channel_data[16] = {0};
 int decode(uint8_t channel,uint8_t bit)
 {
    channel_decode_t *data = &channel_data[channel];
+   bit &= 1;
    if(data->started == 0 && bit==0) {return 0;}
    else {data->started = true;} // first bit
    data->last_bit += bit;
    data->cnt_last_bit += 1;
+   //printf("bit=%d last=%d cnt=%d\n",bit,data->last_bit,data->cnt_last_bit);
+
    if(data->cnt_last_bit >= 3)
    {
-      uint8_t bit_val = data->last_bit > 1 ? 1 : 0;
+      uint8_t bit_val = data->last_bit > 2 ? 1 : 0;
+//printf("bit_val=%d last=%d cnt_bin=%d slot=%d\n",bit_val,data->last_bit,data->cnt_bins,data->cnt_timeslots);
       switch (data->cnt_bins){
          case 0:
             data->mcc_word.bit0 = bit_val;
@@ -956,8 +960,8 @@ int decode(uint8_t channel,uint8_t bit)
                {
                   if(data->miles>>8 != 3){
                   // clear all 
+                  printf("clear miles = %x \n",data->miles>>8);
                   memset(data,0,sizeof(channel_decode_t));
-                  printf("clear miles = %d \n",data->miles);
                   return -1;
                   }
                }
@@ -1033,17 +1037,17 @@ int decode(uint8_t channel,uint8_t bit)
 
 void mcc_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
 {
-   printf("samples=%d sample_rate=%d channels=%d\n",samples,sample_rate,channels);
+   printf("buf %p samples=%d sample_rate=%d channels=%d\n",samle_buf, samples,sample_rate,channels);
    uint16_t *samle_buf16 = (uint16_t *)samle_buf;
    if(samples){
    for (int i = 0; i < samples; i++)
    {
-         //decode(0, samle_buf16[i] & (1));
-         decode_channel(0, &samle_buf16[i]);
+         decode(0, samle_buf16[i] & (1));
+         //decode_channel(0, &samle_buf16[i]);
          //printf("%x\n",samle_buf16[i]& (1));
    }
    }
-   printf("end\n");
+   //printf("end\n");
 
 
 }
@@ -1057,7 +1061,7 @@ logic_analyzer_config_t config ={
    .number_channels=16,
    .sample_rate=144000,
    .meashure_timeout=20,
-   .number_of_samples=20000,
+   .number_of_samples=4032/2,
    .samples_to_psram=0,
    .logic_analyzer_cb=mcc_cb
 };
@@ -1091,7 +1095,8 @@ void test_time(void)
 */
 
    printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-   start_logic_analyzer(&config);
+   esp_err_t ret = start_logic_analyzer(&config);
+   printf("ret=%d\n",ret);
    printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
    vTaskDelay(1000);
    printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));

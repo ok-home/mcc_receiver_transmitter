@@ -120,7 +120,7 @@ void rmt_mcc_tx_task(void*p)
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
-        .loop_count = 10,
+        .loop_count = 0,
     };
     rmt_mcc_word_encode(&tst_word,&rmt_word);
     while(1)
@@ -133,7 +133,7 @@ void rmt_mcc_tx_task(void*p)
     }
 
 }
-#include "logic_analyzer_ws_server.h"
+//#include "logic_analyzer_ws_server.h"
 extern void test_time(void);
 void app_main(void)
 {
@@ -142,7 +142,7 @@ void app_main(void)
     gpio_reset_pin(6);
     gpio_set_direction(6, GPIO_MODE_OUTPUT);
 
-    logic_analyzer_ws_server();
+    //logic_analyzer_ws_server();
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
     test_time();
 }

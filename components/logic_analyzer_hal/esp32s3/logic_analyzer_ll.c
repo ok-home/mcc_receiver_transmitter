@@ -68,14 +68,14 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
 //#ifndef EOF_CTRL
     if (status.in_dscr_empty)
     {
-        vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
 //#endif
 //#ifdef EOF_CTRL
     if (status.in_suc_eof)
     {
-        gpio_set_level(6,g6&1);
-        g6++;
+        //gpio_set_level(6,g6&1);
+        //g6++;
         //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
     
@@ -84,7 +84,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     {
         gpio_set_level(6,g6&1);
         g6++;
-        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+        vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
 
     if (HPTaskAwoken == pdTRUE)
@@ -372,18 +372,6 @@ void logic_analyzer_ll_start()
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // 0
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
-void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
-{
-#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
-    ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
-#else
-    gpio_install_isr_service(0);                 // default
-    gpio_set_intr_type(pin_trigger, trigger_edge);
-    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
-    gpio_intr_disable(pin_trigger);
-    gpio_intr_enable(pin_trigger); // start transfer on irq
-#endif
-}
 // full stop cam, dma, int, pclk, reset pclk pin to default
 void logic_analyzer_ll_stop()
 {
