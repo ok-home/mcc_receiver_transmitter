@@ -902,203 +902,207 @@ uint32_t decode_channel(uint32_t channel, uint16_t const *ptr)
    {
       return -1;
    }
-    printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,yz_mode,id_spid->id);
+   printf("id_miles = %d yz=%x id_spid=%d\n", id_miles->id, yz_mode, id_spid->id);
 
    channel_array[channel].decode_bit_offset = mem_ptr + MCC_WORD_SIZE;
    return 0;
 }
 
-
-
 #endif
-typedef struct bins {
-   uint8_t bit0:1;
-   uint8_t bit6:1;
-   uint8_t bit8:1;
-   uint8_t bit10:1;
-   uint8_t bit_spare:4;
-}  bins_t;
+typedef struct bins
+{
+   uint8_t bit0 : 1;
+   uint8_t bit6 : 1;
+   uint8_t bit8 : 1;
+   uint8_t bit10 : 1;
+   uint8_t bit_spare : 4;
+} bins_t;
 
-typedef struct channel_decode {
+typedef struct channel_decode
+{
    uint8_t started;
    uint8_t cnt_bins;
    uint8_t cnt_timeslots;
-   uint16_t miles;
-   uint16_t spid;
+   uint8_t cnt_last_bit; // 0-3
+   uint8_t last_bit;     // last 3 bit
    uint8_t y_mode;
    uint8_t z_mode;
    uint8_t yz_mode;
-   uint8_t cnt_last_bit;   //0-3
-   uint8_t last_bit;    //last 3 bit
+   uint16_t miles;
+   uint16_t spid;
    bins_t mcc_word; // [timeslot][bins]
 } channel_decode_t;
 
 channel_decode_t channel_data[16] = {0};
 
-int decode(uint8_t channel,uint8_t bit)
+int decode(uint8_t channel, uint8_t bit)
 {
    channel_decode_t *data = &channel_data[channel];
    bit &= 1;
-   if(data->started == 0 && bit==0) {return 0;}
-   else {data->started = true;} // first bit
+   if (data->started == 0 && bit == 0)
+   {
+      return 0;
+   }
+   else
+   {
+      data->started = true;
+   } // first bit
    data->last_bit += bit;
    data->cnt_last_bit += 1;
-   //printf("bit=%d last=%d cnt=%d\n",bit,data->last_bit,data->cnt_last_bit);
+   // printf("bit=%d last=%d cnt=%d\n",bit,data->last_bit,data->cnt_last_bit);
 
-   if(data->cnt_last_bit >= 3)
+   if (data->cnt_last_bit >= 3)
    {
-      uint8_t bit_val = data->last_bit > 2 ? 1 : 0;
-//printf("bit_val=%d last=%d cnt_bin=%d slot=%d\n",bit_val,data->last_bit,data->cnt_bins,data->cnt_timeslots);
-      switch (data->cnt_bins){
-         case 0:
-            data->mcc_word.bit0 = bit_val;
-            if(data->mcc_word.bit0){
-               data->miles |= 1<< 11;
-            }
-            data->miles >>= 1;
-            if(data->cnt_timeslots == 2) // check miles start 110
-               {
-                  if(data->miles>>8 != 3){
-                  // clear all 
-                  printf("clear miles = %x \n",data->miles>>8);
-                  memset(data,0,sizeof(channel_decode_t));
-                  return -1;
-                  }
-               }
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins +=1;
-            break;
-         case 6:
-            data->mcc_word.bit6 = bit_val;
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins +=1;
-            break;
-         case 8:
-            data->mcc_word.bit8 = bit_val;
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins +=1;
-            break;
-         case 10:
-            data->mcc_word.bit10 = bit_val;
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins +=1;
-            break;
-         case 15:
-            if(data->mcc_word.bit6 || data->mcc_word.bit8 || data->mcc_word.bit10 ){
-               data->spid |= 1<<11;
-
-               data->y_mode <<= 1;
-               data->z_mode <<= 1;
-               data->y_mode |= data->mcc_word.bit6;
-               data->z_mode |= data->mcc_word.bit10;
-            }
-            data->spid >>= 1;
-
-            if(data->cnt_timeslots == 10) // all mcc word
+      uint8_t bit_val = data->last_bit > 1 ? 1 : 0;
+      // printf("bit_val=%d last=%d cnt_bin=%d slot=%d\n",bit_val,data->last_bit,data->cnt_bins,data->cnt_timeslots);
+      switch (data->cnt_bins)
+      {
+      case 0:
+         data->mcc_word.bit0 = bit_val;
+         if (data->mcc_word.bit0)
+         {
+            data->miles |= 1 << 11;
+         }
+         data->miles >>= 1;
+         if (data->cnt_timeslots == 2) // check miles start 110
+         {
+            if (data->miles >> 8 != 3)
             {
-               data->yz_mode = (data->y_mode << 4) | data->z_mode;
-//               printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
-            
-               id_code_t code_miles = {0, data->miles};
-               id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
-
-               id_code_t code_spid = {0, data->spid};
-               id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_code_sort, 331, sizeof(id_code_t), id_code_compare);
-
-            if(id_miles && id_spid){
-                printf("id_miles = %d yz=%x id_spid=%d\n",id_miles->id,data->yz_mode,id_spid->id);
+               // clear all
+               printf("clear miles = %x \n", data->miles >> 8);
+               memset(data, 0, sizeof(channel_decode_t));
+               return -1;
             }
-            else {printf("not found\n");}
+         }
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins += 1;
+         break;
+      case 6:
+         data->mcc_word.bit6 = bit_val;
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins += 1;
+         break;
+      case 8:
+         data->mcc_word.bit8 = bit_val;
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins += 1;
+         break;
+      case 10:
+         data->mcc_word.bit10 = bit_val;
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins += 1;
+         break;
+      case 15:
+         if (data->mcc_word.bit6 || data->mcc_word.bit8 || data->mcc_word.bit10)
+         {
+            data->spid |= 1 << 11;
 
-                memset(data,0,sizeof(channel_decode_t));
-                return 0;
+            data->y_mode <<= 1;
+            data->z_mode <<= 1;
+            data->y_mode |= data->mcc_word.bit6;
+            data->z_mode |= data->mcc_word.bit10;
+         }
+         data->spid >>= 1;
+
+         if (data->cnt_timeslots == 10) // all mcc word
+         {
+            data->yz_mode = (data->y_mode << 4) | data->z_mode;
+            //               printf("miles = %x, yz=%x, spid=%x\n",data->miles,data->yz_mode,data->spid);
+
+            id_code_t code_miles = {0, data->miles};
+            id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
+
+            id_code_t code_spid = {0, data->spid};
+            id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_code_sort, 331, sizeof(id_code_t), id_code_compare);
+
+            if (id_miles && id_spid)
+            {
+               printf("id_miles = %d yz=%x id_spid=%d\n", id_miles->id, data->yz_mode, id_spid->id);
             }
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins = 0;
-            data->cnt_timeslots +=1;
-            break;
-         default:
-            data->last_bit = 0;
-            data->cnt_last_bit = 0;
-            data->cnt_bins +=1;
-            break;
+            else
+            {
+               printf("not found\n");
+            }
 
+            memset(data, 0, sizeof(channel_decode_t));
+            return 0;
+         }
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins = 0;
+         data->cnt_timeslots += 1;
+         break;
+      default:
+         data->last_bit = 0;
+         data->cnt_last_bit = 0;
+         data->cnt_bins += 1;
+         break;
       }
-
    }
    return 0;
 }
 
-
 void mcc_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
 {
-   printf("buf %p samples=%d sample_rate=%d channels=%d\n",samle_buf, samples,sample_rate,channels);
+   // printf("buf %p samples=%d sample_rate=%d channels=%d\n",samle_buf, samples,sample_rate,channels);
    uint16_t *samle_buf16 = (uint16_t *)samle_buf;
-   if(samples){
-   for (int i = 0; i < samples; i++)
+   if (samples)
    {
+      for (int i = 0; i < samples / 2; i++)
+      {
          decode(0, samle_buf16[i] & (1));
-         //decode_channel(0, &samle_buf16[i]);
-         //printf("%x\n",samle_buf16[i]& (1));
+         // decode_channel(0, &samle_buf16[i]);
+         // printf("%x\n",samle_buf16[i]& (1));
+      }
    }
-   }
-   //printf("end\n");
-
-
+   // printf("end\n");
 }
 
-logic_analyzer_config_t config ={
-   .pin[0] = 4,
-   .pin[1] = 5,
-   .pin[2] = 6,
-   .pin_trigger=-1,
-   .trigger_edge=1,
-   .number_channels=16,
-   .sample_rate=144000,
-   .meashure_timeout=20,
-   .number_of_samples=4032/2,
-   .samples_to_psram=0,
-   .logic_analyzer_cb=mcc_cb
-};
+logic_analyzer_config_t config = {
+    .pin[0] = 4,
+    .pin[1] = 5,
+    .pin[2] = 6,
+    .pin_trigger = -1,
+    .trigger_edge = 1,
+    .number_channels = 16,
+    .sample_rate = 144000,
+    .meashure_timeout = 20,
+    .number_of_samples = 4032,
+    .samples_to_psram = 0,
+    .logic_analyzer_cb = mcc_cb};
 #include "esp_heap_caps.h"
 void test_time(void)
 {
-/*   uint64_t t0 = esp_timer_get_time();
-   for (int j = 0; j < 2; j++)
-   {
-         channel_array[0].decode_bit_offset = NULL;
+   /*  uint64_t t0 = esp_timer_get_time();
+     for (int j = 0; j < 2; j++)
+     {
+           channel_array[0].decode_bit_offset = NULL;
 
-      for (int i = 0; i < sizeof(model)/2-MCC_WORD_SIZE; i++)
-      {
-         decode_channel(0, &model[i]);
-      }
-   }
-      uint64_t t1 = esp_timer_get_time();
-         printf("time %llu\n", t1 - t0);
+        for (int i = 0; i < sizeof(model)/2-MCC_WORD_SIZE; i++)
+        {
+        //   decode_channel(0, &model[i]);
+        }
+     }
+        uint64_t t1 = esp_timer_get_time();
+           printf("time %llu\n", t1 - t0);
 
-   t0 = esp_timer_get_time();
-   for (int j = 0; j < 2; j++)
-   {
-      memset(channel_data,0,sizeof(channel_data));
-      for (int i = 0; i < sizeof(model)/2; i++)
-      {
-         decode(0, model[i]);
-      }
-   }
-      t1 = esp_timer_get_time();
-         printf("time %llu\n", t1 - t0);
-*/
+     t0 = esp_timer_get_time();
+     for (int j = 0; j < 2; j++)
+     {
+        memset(channel_data,0,sizeof(channel_data));
+        for (int i = 0; i < sizeof(model)/2; i++)
+        {
+           decode(0, model[i]);
+        }
+     }
+        t1 = esp_timer_get_time();
+           printf("time %llu\n", t1 - t0);
+  */
 
-   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
    esp_err_t ret = start_logic_analyzer(&config);
-   printf("ret=%d\n",ret);
-   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-   vTaskDelay(1000);
-   printf("mem before %d block %d\n",heap_caps_get_total_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-
+   printf("ret=%d\n", ret);
 }

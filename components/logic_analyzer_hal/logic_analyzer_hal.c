@@ -59,7 +59,7 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
 {
     uint32_t count = size / DMA_FRAME;     //  dma frames count
     uint32_t last_size = size % DMA_FRAME; // last frame bytes
-
+    printf("cnt=%ld\n", count);
     lldesc_t *dma = (lldesc_t *)heap_caps_malloc((count + 1) * sizeof(lldesc_t), MALLOC_CAP_DMA);
     if (dma == NULL)
     {
@@ -71,22 +71,24 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
         dma[x].size = DMA_FRAME;
         dma[x].length = DMA_FRAME;
         dma[x].sosf = 0;
-        dma[x].eof = 1;
+        dma[x].eof = 0;
         dma[x].owner = 1;
         dma[x].buf = buffer + DMA_FRAME * x;
-        dma[x].empty = (uint32_t)&dma[(x + 1)];
+        if(x==0)
+        {dma[x].empty = (uint32_t)&dma[(x + 1)];}
+        else{dma[x].empty = (uint32_t)&dma[(0)];} // non stop}
         printf("dma[%d].buf = %p\n", x, dma[x].buf);
     }
-
+/*
     dma[x].size = last_size;
     dma[x].length = last_size;
     dma[x].sosf = 0;
-    dma[x].eof = 1;
+    dma[x].eof = 0;
     dma[x].owner = 1;
     dma[x].buf = buffer + DMA_FRAME * x;
     dma[x].empty = (uint32_t)&dma[(0)]; // non stop
-    printf("dma[%d].buf = %p\n", x, dma[x].buf);
-
+    printf("dma[%d].buf = %p size=%ld \n", x, dma[x].buf,last_size);
+*/
     return dma;
 }
 /**
@@ -152,7 +154,7 @@ static void logic_analyzer_task(void *arg)
         }
         //printf("notmo=%d cnt %d\n",noTimeout,cnt);
         cnt++;
-        if(cnt==4) {logic_analyzer_ll_stop(); 
+        if(cnt==100) {logic_analyzer_ll_stop(); 
         cnt=0;
         vTaskDelete(logic_analyzer_task_handle);}
     }
@@ -207,7 +209,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         goto _ret;
     }
     // check number of samples
-    if (config->number_of_samples != DMA_FRAME / (config->number_channels / 8))
+    if (config->number_of_samples != DMA_FRAME )
     {
         goto _ret;
     }
