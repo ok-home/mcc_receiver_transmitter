@@ -83,8 +83,7 @@ const id_code_t miles_code_sort[38] = {
     {30, 0x70b},
     {27, 0x713},
     {29, 0x723},
-    {24, 0x743}
-};
+    {24, 0x743}};
 const id_code_t spid_id_code_sort[331] = {
     {0, 0x000},
     {1, 0x00f},
@@ -416,9 +415,8 @@ const id_code_t spid_id_code_sort[331] = {
     {327, 0x710},
     {328, 0x720},
     {329, 0x740},
-    {330, 0x780}
-};
-#if 0
+    {330, 0x780}};
+#if 1
 // model for test encoder
 const uint16_t model[] =
     {
@@ -536,7 +534,7 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
 
          if (data->cnt_timeslots == 10) // all mcc word
          {
-            // convert y code & z code to yz id    
+            // convert y code & z code to yz id
             data->yz_mode = (data->y_mode << 4) | data->z_mode;
             // find miles in table -> miles id
             id_code_t code_miles = {0, data->miles};
@@ -570,67 +568,77 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
    return 0;
 }
 
-static uint16_t mcc_get_miles_code( uint16_t mil)
-{  // from 0 to 36
-    return miles_id_sort[mil].code;   //010 0110 1011
+static uint16_t mcc_get_miles_code(uint16_t mil)
+{                                  // from 0 to 36
+   return miles_id_sort[mil].code; // 010 0110 1011
 }
-static uint16_t mcc_get_spid_code (uint16_t spi)
-{ // from 1 to 330
-    return spid_id_code_sort[spi].code;   //100 0000 0111
+static uint16_t mcc_get_spid_code(uint16_t spi)
+{                                      // from 1 to 330
+   return spid_id_code_sort[spi].code; // 100 0000 0111
 }
 // encode mcc word to  rmt words
-void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word){
-    // clear all bits
-    uint16_t miles = mcc_get_miles_code(mcc_word->miles);
-    uint16_t spid = mcc_get_spid_code(mcc_word->spid);
-    uint8_t y_mod = ((mcc_word->yz_mod)>>4)&0xf;
-    uint8_t z_mod = (mcc_word->yz_mod)&0xf;
-    // set miles & clear spid
-    for(int i=0;i<11;i++)
-    {
-        rmt_word->mcc_word[i].t_bit0.level0=miles&1;
-        miles >>= 1;
-        rmt_word->mcc_word[i].t_bit0.level1=0;
-        rmt_word->mcc_word[i].t_bit0.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit0.duration1=RMT_BIT_WIDTH*5;
+void rmt_mcc_word_encode(mcc_code_word_t *mcc_word, rmt_mcc_word_t *rmt_word)
+{
+   // clear all bits
+   uint16_t miles = mcc_get_miles_code(mcc_word->miles);
+   uint16_t spid = mcc_get_spid_code(mcc_word->spid);
+   uint8_t y_mod = ((mcc_word->yz_mod) >> 4) & 0xf;
+   uint8_t z_mod = (mcc_word->yz_mod) & 0xf;
+   // set miles & clear spid
+   for (int i = 0; i < 11; i++)
+   {
+      rmt_word->mcc_word[i].t_bit0.level0 = miles & 1;
+      miles >>= 1;
+      rmt_word->mcc_word[i].t_bit0.level1 = 0;
+      rmt_word->mcc_word[i].t_bit0.duration0 = RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit0.duration1 = RMT_BIT_WIDTH * 5;
 
-        rmt_word->mcc_word[i].t_bit6.level0=0;
-        rmt_word->mcc_word[i].t_bit6.level1=0;
-        rmt_word->mcc_word[i].t_bit6.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit6.duration1=RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit6.level0 = 0;
+      rmt_word->mcc_word[i].t_bit6.level1 = 0;
+      rmt_word->mcc_word[i].t_bit6.duration0 = RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit6.duration1 = RMT_BIT_WIDTH;
 
-        rmt_word->mcc_word[i].t_bit8.level0=0;
-        rmt_word->mcc_word[i].t_bit8.level1=0;
-        rmt_word->mcc_word[i].t_bit8.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit8.duration1=RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit8.level0 = 0;
+      rmt_word->mcc_word[i].t_bit8.level1 = 0;
+      rmt_word->mcc_word[i].t_bit8.duration0 = RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit8.duration1 = RMT_BIT_WIDTH;
 
-        rmt_word->mcc_word[i].t_bit10.level0=0;
-        rmt_word->mcc_word[i].t_bit10.level1=0;
-        rmt_word->mcc_word[i].t_bit10.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit10.duration1=RMT_BIT_WIDTH*5;
-    }
-        rmt_word->rmt_stop.val = 0;
-    // set spid & yz_mode
-    for(int i=10; i >= 0;i--){
-        if((spid>>i)&1)
-        {
-            if(z_mod&1)
+      rmt_word->mcc_word[i].t_bit10.level0 = 0;
+      rmt_word->mcc_word[i].t_bit10.level1 = 0;
+      rmt_word->mcc_word[i].t_bit10.duration0 = RMT_BIT_WIDTH;
+      rmt_word->mcc_word[i].t_bit10.duration1 = RMT_BIT_WIDTH * 5;
+   }
+   rmt_word->rmt_stop.val = 0;
+   // set spid & yz_mode
+   for (int i = 10; i >= 0; i--)
+   {
+      if ((spid >> i) & 1)
+      {
+         if (z_mod & 1)
+         {
+            rmt_word->mcc_word[i].t_bit10.level0 = 1;
+         }
+         else
+         {
+            if (y_mod & 1)
             {
-                rmt_word->mcc_word[i].t_bit10.level0=1;
+               rmt_word->mcc_word[i].t_bit6.level0 = 1;
             }
-            else 
+            else
             {
-            if( y_mod&1)
-                {
-                    rmt_word->mcc_word[i].t_bit6.level0=1;
-                }
-                  else
-                {
-                    rmt_word->mcc_word[i].t_bit8.level0=1;
-                }
+               rmt_word->mcc_word[i].t_bit8.level0 = 1;
             }
-        z_mod >>=1;
-        y_mod >>=1;
-        }
-    }
+         }
+         z_mod >>= 1;
+         y_mod >>= 1;
+      }
+   }
+}
+
+void test()
+{
+   for(int i=240;i<sizeof(model)/2;i++)
+   {
+      mcc_word_decode(0,model[i]);
+   }
 }
