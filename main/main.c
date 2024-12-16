@@ -13,16 +13,9 @@
 #include "driver/rmt_rx.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
-/*
-#include "soc/gpio_sig_map.h"
-#include "soc/gpio_periph.h"
-#include "soc/io_mux_reg.h"
-#define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
-#define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
-*/
 
 #include "mcc_encoder.h"
-#include "maps.c"
+#include "mcc_capture.h"
 
 static const char *TAG = "MCC TEST";
 
@@ -45,70 +38,6 @@ void rmt_mcc_tx_init(void){
     ESP_ERROR_CHECK(rmt_new_copy_encoder(&tx_encoder_config, &tx_encoder));
     ESP_ERROR_CHECK(rmt_enable(tx_chan_handle));
 }
-uint16_t mcc_get_miles_code( uint16_t mil)
-{  // from 0 to 36
-    return miles_id_sort[mil].code;   //010 0110 1011
-}
-uint16_t mcc_get_spid_code (uint16_t spi)
-{ // from 1 to 330
-    return spid_id_sort[spi].code;   //100 0000 0111
-}
-void rmt_mcc_word_encode(mcc_code_word_t* tst_word, rmt_mcc_word_t* rmt_word){
-    // clear all bits
-    uint16_t miles = mcc_get_miles_code(tst_word->miles);
-    uint16_t spid = mcc_get_spid_code(tst_word->spid);
-    uint8_t y_mod = ((tst_word->yz_mod)>>4)&0xf;
-    uint8_t z_mod = (tst_word->yz_mod)&0xf;
-    // set miles & clear spid
-    for(int i=0;i<11;i++)
-    {
-        rmt_word->mcc_word[i].t_bit0.level0=miles&1;
-        miles >>= 1;
-        rmt_word->mcc_word[i].t_bit0.level1=0;
-        rmt_word->mcc_word[i].t_bit0.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit0.duration1=RMT_BIT_WIDTH*5;
-
-        rmt_word->mcc_word[i].t_bit6.level0=0;
-        rmt_word->mcc_word[i].t_bit6.level1=0;
-        rmt_word->mcc_word[i].t_bit6.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit6.duration1=RMT_BIT_WIDTH;
-
-        rmt_word->mcc_word[i].t_bit8.level0=0;
-        rmt_word->mcc_word[i].t_bit8.level1=0;
-        rmt_word->mcc_word[i].t_bit8.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit8.duration1=RMT_BIT_WIDTH;
-
-        rmt_word->mcc_word[i].t_bit10.level0=0;
-        rmt_word->mcc_word[i].t_bit10.level1=0;
-        rmt_word->mcc_word[i].t_bit10.duration0=RMT_BIT_WIDTH;
-        rmt_word->mcc_word[i].t_bit10.duration1=RMT_BIT_WIDTH*5;
-    }
-        rmt_word->rmt_stop.val = 0;
-
-    for(int i=10; i >= 0;i--){
-        if((spid>>i)&1)
-        {
-            if(z_mod&1)
-            {
-                rmt_word->mcc_word[i].t_bit10.level0=1;
-            }
-            else 
-            {
-            if( y_mod&1)
-                {
-                    rmt_word->mcc_word[i].t_bit6.level0=1;
-                }
-                  else
-                {
-                    rmt_word->mcc_word[i].t_bit8.level0=1;
-                }
-            }
-        z_mod >>=1;
-        y_mod >>=1;
-        }
-    }
-}
-
 
 void rmt_mcc_tx_task(void*p)
 {
@@ -133,16 +62,56 @@ void rmt_mcc_tx_task(void*p)
     }
 
 }
-//#include "logic_analyzer_ws_server.h"
-extern void test_time(void);
+
+void mcc_decode_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
+{
+   uint16_t *samle_buf16 = (uint16_t *)samle_buf;
+   if (samples) // 2016
+   {
+      for (int i = 0; i < samples; i++)
+      {
+         decode(0, samle_buf16[i] & (1));
+      }
+   }
+   // printf("end\n");
+}
+
+mcc_capture_config_t mcc_capture_config = {
+    .pin[0] = 4,
+    .pin[1] = 5,
+    .pin[2] = 6,
+    .pin[3] = -1,
+    .pin[4] = -1,
+    .pin[5] = -1,
+    .pin[6] = -1,
+    .pin[7] = -1,
+    .pin[8] = -1,
+    .pin[9] = -1,
+    .pin[10] = -1,
+    .pin[11] = -1,
+    .pin[12] = -1,
+    .pin[13] = -1,
+    .pin[14] = -1,
+    .pin[15] = -1,
+    .pin_trigger = -1,     // no trigger
+    .trigger_edge = 1,     // not use
+    .number_channels = 16, // already 16 cha
+    .sample_rate = 144000, // aready 144000 Hz = 144000/3 = 48000 * ( 3 samples in bin )
+    .meashure_timeout = 20,// 200 millisek
+    .number_of_samples = 2016,  //samples in dma frame 4032/2=2016 - around 4 mcc word (3*16*11=528 sample), 2 frame ping/pong
+    .samples_to_psram = 0,       // already in ram
+    .mcc_capture_cb = mcc_decode_cb};
+
+
 void app_main(void)
 {
     gpio_reset_pin(5);
     gpio_set_direction(5, GPIO_MODE_OUTPUT);
     gpio_reset_pin(6);
     gpio_set_direction(6, GPIO_MODE_OUTPUT);
-
-    //logic_analyzer_ws_server();
+ 
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
-    test_time();
+
+    esp_err_t ret = start_mcc_capture(&mcc_capture_config);
+    printf("ret=%d\n", ret);
 }

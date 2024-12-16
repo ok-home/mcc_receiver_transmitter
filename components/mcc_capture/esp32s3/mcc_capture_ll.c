@@ -36,7 +36,7 @@
 
 #define TAG "esp32s3_ll"
 
-#include "logic_analyzer_ll.h"
+#include "mcc_capture_ll.h"
 
 // if define external logic analyzer - define pin as gpio input
 // else - self diagnostic analyzer - define pin as defined on firmware + input to cam
@@ -50,13 +50,13 @@ static int g6 = 0;
 static intr_handle_t isr_handle;
 static int dma_num = 0;
 //  trigger isr handle -> start transfer
-void IRAM_ATTR la_ll_trigger_isr(void *pin)
+void IRAM_ATTR mcc_ll_trigger_isr(void *pin)
 {
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // enable cam
     gpio_intr_disable((int)pin);
 }
 // transfer done -> eof isr from dma descr_empty
-static void IRAM_ATTR la_ll_dma_isr(void *handle)
+static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
@@ -95,7 +95,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 // for sample rate less then 1 MHz -> use ledc
-static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
+static void mcc_capture_ll_set_ledc_pclk(int sample_rate)
 {
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
@@ -119,9 +119,9 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
 }
 #endif
 // sample rate may be not equal to config sample rate -> return real sample rate
-int logic_analyzer_ll_get_sample_rate(int sample_rate)
+int mcc_capture_ll_get_sample_rate(int sample_rate)
 {
-    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
+    int ldiv = (MCC_HW_CLK_SAMPLE_RATE / sample_rate);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if (ldiv > 160)
@@ -133,12 +133,12 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate)
     {
         ldiv = 160;
     }
-    return LA_HW_CLK_SAMPLE_RATE / ldiv;
+    return MCC_HW_CLK_SAMPLE_RATE / ldiv;
 }
 // set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
-static void logic_analyzer_ll_set_clock(int sample_rate)
+static void mcc_capture_ll_set_clock(int sample_rate)
 {
-    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
+    int ldiv = (MCC_HW_CLK_SAMPLE_RATE / sample_rate);
     if (ldiv > 160) // > 1mHz
     {
         ldiv = 160;
@@ -150,10 +150,10 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
+    if ((MCC_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
         ldiv = 8; // cam clk to 20 MHz
-        logic_analyzer_ll_set_ledc_pclk(sample_rate);
+        mcc_capture_ll_set_ledc_pclk(sample_rate);
     }
 #endif
     // input clk pin  -> pclk
@@ -166,15 +166,15 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     LCD_CAM.cam_ctrl.cam_clk_sel = 3; // Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160.
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
-static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
+static void mcc_capture_ll_set_mode(int sample_rate, int channels)
 {
     // attension !!
-    // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
+    // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> mcc_capture_ll_set_mode  clear len data
     LCD_CAM.cam_ctrl.val = 0;
     LCD_CAM.cam_ctrl1.val = 0;
     LCD_CAM.cam_rgb_yuv.val = 0; // disable converter
 
-    logic_analyzer_ll_set_clock(sample_rate); // set clock divider
+    mcc_capture_ll_set_clock(sample_rate); // set clock divider
 
     LCD_CAM.cam_ctrl.cam_stop_en = 0;            // Camera stop enable signal, 1: camera stops when GDMA Rx FIFO is full. 0: Do not stop. (R/W)
     LCD_CAM.cam_ctrl.cam_vsync_filter_thres = 0; // Filter by LCD_CAM clock
@@ -212,7 +212,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
 }
 // set cam input pin & vsync, hsynk, henable to const to stop transfer
-static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
+static void mcc_capture_ll_set_pin(int *data_pins, int channels)
 {
     // vTaskDelay(5); //??
 
@@ -263,7 +263,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 received.
 */
 // find free gdma channel, enable dma clock, set dma mode, connect to cam module
-static esp_err_t logic_analyzer_ll_dma_init(void)
+static esp_err_t mcc_capture_ll_dma_init(void)
 {
     for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--)
     {
@@ -296,7 +296,7 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-#ifdef LA_HW_PSRAM
+#ifdef MCC_HW_PSRAM
     GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST >> 5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
 #else
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
@@ -328,7 +328,7 @@ signal and control signal.
 interrupts set in Step 6 will be generated.
 */
 // enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
-void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
+void mcc_capture_ll_config(int *data_pins, int sample_rate, int channels, mcc_frame_t *frame)
 {
     // Enable and configure cam
     // enable CLK
@@ -339,9 +339,9 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
         REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
     }
-    logic_analyzer_ll_set_pin(data_pins, channels);
-    logic_analyzer_ll_set_mode(sample_rate, channels);
-    logic_analyzer_ll_dma_init();
+    mcc_capture_ll_set_pin(data_pins, channels);
+    mcc_capture_ll_set_mode(sample_rate, channels);
+    mcc_capture_ll_dma_init();
 
     // set dma descriptor
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
@@ -367,13 +367,13 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 }
 // start transfer without trigger -> v_sync to enable
-void logic_analyzer_ll_start()
+void mcc_capture_ll_start()
 {
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // 0
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 // full stop cam, dma, int, pclk, reset pclk pin to default
-void logic_analyzer_ll_stop()
+void mcc_capture_ll_stop()
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;
     GDMA.channel[dma_num].in.link.stop = 1; // ??
@@ -393,18 +393,18 @@ void logic_analyzer_ll_stop()
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 }
 
-esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
+esp_err_t mcc_capture_ll_init_dma_eof_isr(TaskHandle_t task)
 {
     esp_err_t ret = ESP_OK;
 
     /*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                          ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                                          (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
-                                         la_ll_dma_isr, (void *)task, &isr_handle);
+                                         mcc_ll_dma_isr, (void *)task, &isr_handle);
     */
     ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                          ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
-                         la_ll_dma_isr, (void *)task, &isr_handle);
+                         mcc_ll_dma_isr, (void *)task, &isr_handle);
 
     if (ret != ESP_OK)
     {
@@ -413,7 +413,7 @@ esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
     }
     return ret;
 }
-void logic_analyzer_ll_deinit_dma_eof_isr()
+void mcc_capture_ll_deinit_dma_eof_isr()
 {
     esp_intr_free(isr_handle);
 }

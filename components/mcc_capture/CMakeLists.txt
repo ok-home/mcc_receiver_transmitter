@@ -1,5 +1,5 @@
 set( srcs 
-    logic_analyzer_hal.c
+    mcc_capture.c
 )
 set( includedir 
     include 
@@ -15,7 +15,7 @@ set( priv_require
 
   if(IDF_TARGET STREQUAL "esp32")
     list(APPEND srcs
-        esp32/logic_analyzer_ll.c      
+        esp32/mcc_capture_ll.c      
     )
     list(APPEND priv_includedir
         esp32/private_include
@@ -24,7 +24,7 @@ set( priv_require
 
   if(IDF_TARGET STREQUAL "esp32s3")
     list(APPEND srcs
-        esp32s3/logic_analyzer_ll.c      
+        esp32s3/mcc_capture_ll.c      
     )
     list(APPEND priv_includedir
         esp32s3/private_include

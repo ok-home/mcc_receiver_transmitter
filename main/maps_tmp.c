@@ -7,7 +7,7 @@
 #include "esp_timer.h"
 #include <string.h>
 #include "mcc_encoder.h"
-#include "logic_analyzer_hal.h"
+#include "mcc_capture.h"
 // 0-36
 const uint16_t miles[37] =
     {
@@ -756,7 +756,7 @@ const id_code_t spid_code_sort[331] = {
     {327, 0x710},
     {328, 0x720},
     {329, 0x740},
-    {330, 0x780},
+    {330, 0x780}
 };
 
 const uint16_t model[] =
@@ -930,10 +930,10 @@ typedef struct channel_decode
    uint8_t yz_mode;
    uint16_t miles;
    uint16_t spid;
-   bins_t mcc_word; // [timeslot][bins]
+   bins_t mcc_word; // bins 0-6-8-10
 } channel_decode_t;
 
-channel_decode_t channel_data[16] = {0};
+static channel_decode_t channel_data[16] = {0};
 
 int decode(uint8_t channel, uint8_t bit)
 {
@@ -957,7 +957,7 @@ int decode(uint8_t channel, uint8_t bit)
       // printf("bit_val=%d last=%d cnt_bin=%d slot=%d\n",bit_val,data->last_bit,data->cnt_bins,data->cnt_timeslots);
       switch (data->cnt_bins)
       {
-      case 0:
+      case 0: // first bin in timeslot
          data->mcc_word.bit0 = bit_val;
          if (data->mcc_word.bit0)
          {
@@ -996,7 +996,7 @@ int decode(uint8_t channel, uint8_t bit)
          data->cnt_last_bit = 0;
          data->cnt_bins += 1;
          break;
-      case 15:
+      case 15: // last bin in timeslot
          if (data->mcc_word.bit6 || data->mcc_word.bit8 || data->mcc_word.bit10)
          {
             data->spid |= 1 << 11;
@@ -1027,7 +1027,6 @@ int decode(uint8_t channel, uint8_t bit)
             {
                printf("not found\n");
             }
-
             memset(data, 0, sizeof(channel_decode_t));
             return 0;
          }
@@ -1046,35 +1045,45 @@ int decode(uint8_t channel, uint8_t bit)
    return 0;
 }
 
-void mcc_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
+void mcc_decode_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
 {
-   // printf("buf %p samples=%d sample_rate=%d channels=%d\n",samle_buf, samples,sample_rate,channels);
    uint16_t *samle_buf16 = (uint16_t *)samle_buf;
    if (samples)
    {
       for (int i = 0; i < samples / 2; i++)
       {
          decode(0, samle_buf16[i] & (1));
-         // decode_channel(0, &samle_buf16[i]);
-         // printf("%x\n",samle_buf16[i]& (1));
       }
    }
    // printf("end\n");
 }
 
-logic_analyzer_config_t config = {
+mcc_capture_config_t config = {
     .pin[0] = 4,
     .pin[1] = 5,
     .pin[2] = 6,
-    .pin_trigger = -1,
-    .trigger_edge = 1,
-    .number_channels = 16,
-    .sample_rate = 144000,
-    .meashure_timeout = 20,
-    .number_of_samples = 4032,
-    .samples_to_psram = 0,
-    .logic_analyzer_cb = mcc_cb};
-#include "esp_heap_caps.h"
+    .pin[3] = -1,
+    .pin[4] = -1,
+    .pin[5] = -1,
+    .pin[6] = -1,
+    .pin[7] = -1,
+    .pin[8] = -1,
+    .pin[9] = -1,
+    .pin[10] = -1,
+    .pin[11] = -1,
+    .pin[12] = -1,
+    .pin[13] = -1,
+    .pin[14] = -1,
+    .pin[15] = -1,
+    .pin_trigger = -1,     // no trigger
+    .trigger_edge = 1,     // not use
+    .number_channels = 16, // already 16 cha
+    .sample_rate = 144000, // aready 144000 Hz = 144000/3 = 48000 * ( 3 samples in bin )
+    .meashure_timeout = 20,// 200 millisek
+    .number_of_samples = 4032,  //samples in dma frame 4032/2=2016 - around 4 mcc word (3*16*11=528 sample), 2 frame ping/pong
+    .samples_to_psram = 0,       // already in ram
+    .mcc_capture_cb = mcc_decode_cb};
+
 void test_time(void)
 {
    /*  uint64_t t0 = esp_timer_get_time();
@@ -1103,6 +1112,6 @@ void test_time(void)
            printf("time %llu\n", t1 - t0);
   */
 
-   esp_err_t ret = start_logic_analyzer(&config);
+   esp_err_t ret = start_mcc_capture(&config);
    printf("ret=%d\n", ret);
 }

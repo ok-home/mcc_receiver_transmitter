@@ -36,8 +36,8 @@ typedef struct mcc_code_word {
         uint8_t yz_mod;
 } mcc_code_word_t;
 
-typedef struct mcc_code_word_pattern {
-        uint16_t miles;
-        uint16_t spid;
-        uint8_t yz_mod;
-} mcc_code_word_pattern_t;
+// mcc word decode one channel bit to bit
+int mcc_word_decode(uint8_t channel, uint8_t bit);
+// encode mcc word to  rmt words
+void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word);
+

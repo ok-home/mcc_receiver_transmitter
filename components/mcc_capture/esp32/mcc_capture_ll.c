@@ -7,7 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include "logic_analyzer_ll.h"
+#include "mcc_capture_ll.h"
 
 // if define external logic analyzer - define pin as gpio input
 // else - self diagnostic analyzer - define pin as defined on firmware + input to i2s
@@ -39,13 +39,13 @@ typedef struct div_68
 
 static intr_handle_t isr_handle;
 //  trigger isr handle -> triggered start
-void IRAM_ATTR la_ll_trigger_isr(void *pin)
+void IRAM_ATTR mcc_ll_trigger_isr(void *pin)
 {
     gpio_matrix_in(0x38, I2SXI_V_SYNC_IDX, false);
     gpio_intr_disable((int)pin);
 }
 // dma eof isr -> end transfer
-static void IRAM_ATTR la_ll_dma_isr(void *handle)
+static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
     typeof(I2SX.int_st) status = I2SX.int_st;
@@ -64,7 +64,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     }
 }
 // reset i2s & dma on config
-static void logic_analyzer_ll_reset()
+static void mcc_capture_ll_reset()
 {
     I2SX.conf.rx_reset = 1;
     I2SX.conf.rx_reset = 0;
@@ -78,7 +78,7 @@ static void logic_analyzer_ll_reset()
     I2SX.lc_conf.ahbm_rst = 0;
 }
 // set i2s mode lcd/cam mode, master receive, parallel 16 bit
-static void logic_analyzer_ll_set_mode()
+static void mcc_capture_ll_set_mode()
 {
     I2SX.conf.val = 0;
     I2SX.conf2.lcd_en = 1;
@@ -95,10 +95,10 @@ static void logic_analyzer_ll_set_mode()
 //
 // esp32 RefMan - 12.5
 // In the LCD mode, the frequency of WS is half of fBCK
-// LA_HW_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
+// MCC_HW_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
 // convert sample rate to i2s register dividers
 //
-static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
+static div_68_t mcc_capture_ll_convert_sample_rate(int sample_rate)
 {
     div_68_t ret = {
         .div_6 = 1, // div_6 > =2
@@ -107,7 +107,7 @@ static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
     int delta_div_6 = 0;
     int delta = 0;
     int mindelta = 32767;
-    int cnt = LA_HW_CLK_SAMPLE_RATE / sample_rate;
+    int cnt = MCC_HW_CLK_SAMPLE_RATE / sample_rate;
     // extra div div_8+(div_8a/div_8b)
     // int div_8a = 1;
     // int div_8b = 0;
@@ -152,9 +152,9 @@ static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
     return ret;
 }
 // set i2s dividers
-static void logic_analyzer_ll_set_clock(int sample_rate)
+static void mcc_capture_ll_set_clock(int sample_rate)
 {
-    div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    div_68_t ldiv = mcc_capture_ll_convert_sample_rate(sample_rate);
     // Configure clock divider
     I2SX.clkm_conf.clkm_div_a = 0;
     I2SX.clkm_conf.clkm_div_b = 0;
@@ -162,7 +162,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     I2SX.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
 // set i2s pins as input, vsync, hsync, henable as const to stop transfer mode
-static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
+static void mcc_capture_ll_set_pin(int *data_pins, int channels)
 {
 
     // vTaskDelay(5);
@@ -206,16 +206,16 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
     gpio_matrix_in(0x38, I2SXI_H_ENABLE_IDX, false);
 }
 // start i2s module, set sample rate, sample count, set dma, prestart -> transfer started from vsync
-void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
+void mcc_capture_ll_config(int *data_pins, int sample_rate, int channels, mcc_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2SX_MODULE);
 
     I2SX.conf.rx_start = 0;
-    logic_analyzer_ll_reset();
-    logic_analyzer_ll_set_mode();
-    logic_analyzer_ll_set_clock(sample_rate);
-    logic_analyzer_ll_set_pin(data_pins, channels);
+    mcc_capture_ll_reset();
+    mcc_capture_ll_set_mode();
+    mcc_capture_ll_set_clock(sample_rate);
+    mcc_capture_ll_set_pin(data_pins, channels);
     // set dma descriptor
     I2SX.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2SX.in_link.addr = ((uint32_t) & (frame->dma[0]));
@@ -225,13 +225,13 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     I2SX.in_link.start = 1;
 }
 // no triggered start
-void logic_analyzer_ll_start()
+void mcc_capture_ll_start()
 {
     I2SX.conf.rx_start = 1;                        // enable  transfer
     gpio_matrix_in(0x38, I2SXI_V_SYNC_IDX, false); // start transfer
 }
 // set triggers -> wait trigger event to start
-void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
+void mcc_capture_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
     I2SX.conf.rx_start = 1; // enable transfer
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
@@ -239,29 +239,29 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 #else
     gpio_install_isr_service(0); // default
     gpio_set_intr_type(pin_trigger, trigger_edge);
-    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
+    gpio_isr_handler_add(pin_trigger, mcc_ll_trigger_isr, (void *)pin_trigger);
     gpio_intr_disable(pin_trigger);
     gpio_intr_enable(pin_trigger); // start transfer on irq
 #endif
 }
 // stop i2s,isr,dma
-void logic_analyzer_ll_stop()
+void mcc_capture_ll_stop()
 {
     I2SX.conf.rx_start = 0;
     I2S_ISR_DISABLE(in_suc_eof);
     I2SX.in_link.stop = 1;
 }
 // sample rate may be different then cfg -> get real sample rate
-int logic_analyzer_ll_get_sample_rate(int sample_rate)
+int mcc_capture_ll_get_sample_rate(int sample_rate)
 {
-    div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_HW_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
+    div_68_t ldiv = mcc_capture_ll_convert_sample_rate(sample_rate);
+    return MCC_HW_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
 }
-esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
+esp_err_t mcc_capture_ll_init_dma_eof_isr(TaskHandle_t task)
 {
-    return esp_intr_alloc(ETS_I2SX_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
+    return esp_intr_alloc(ETS_I2SX_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, mcc_ll_dma_isr, (void *)task, &isr_handle);
 }
-void logic_analyzer_ll_deinit_dma_eof_isr()
+void mcc_capture_ll_deinit_dma_eof_isr()
 {
     esp_intr_free(isr_handle);
 }
