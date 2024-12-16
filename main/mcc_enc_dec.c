@@ -558,6 +558,7 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
          data->cnt_timeslots += 1;
          break;
       default:
+         if(bit_val){printf("noise\n");}
          data->cnt_bins += 1;
          break;
       } // end switch
