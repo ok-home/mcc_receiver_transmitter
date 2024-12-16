@@ -70,7 +70,7 @@ void mcc_decode_cb(uint8_t *samle_buf, int samples, int sample_rate, int channel
    {
       for (int i = 0; i < samples; i++)
       {
-         decode(0, samle_buf16[i] & (1));
+         mcc_word_decode(0, samle_buf16[i] & (1));
       }
    }
    // printf("end\n");
@@ -112,6 +112,8 @@ void app_main(void)
  
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 
+    vTaskDelay(100);
+
     esp_err_t ret = start_mcc_capture(&mcc_capture_config);
-    printf("ret=%d\n", ret);
+
 }

@@ -60,8 +60,6 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
 {
     uint32_t count = size / DMA_FRAME;     //  dma frames count
     if(count != 2) {return 0;} // only 2 dma frame
-    uint32_t last_size = size % DMA_FRAME; // last frame bytes
-    printf("cnt=%ld\n", count);
     lldesc_t *dma = (lldesc_t *)heap_caps_malloc((count + 1) * sizeof(lldesc_t), MALLOC_CAP_DMA);
     if (dma == NULL)
     {

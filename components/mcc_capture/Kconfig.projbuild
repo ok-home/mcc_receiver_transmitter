@@ -1,4 +1,4 @@
-menu "Logic Analyzer Configuration"
+menu "MCC Capture Configuration"
 
     if IDF_TARGET_ESP32
     
