@@ -15,14 +15,6 @@
 
 #include "esp_idf_version.h"
 
-#ifdef CONFIG_SPIRAM
-#define MCC_HW_PSRAM 1
-#endif
-// cache err -> define only > 5.2.0
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
-#undef MCC_HW_PSRAM
-#endif
-
 #define MCC_HW_CLK_SAMPLE_RATE 160000000
 
 #define MCC_HW_MIN_GPIO -1
@@ -58,3 +50,4 @@
 #define MCC_HW_MAX_RAM_16_SAMPLE_CNT 100000
 
 #define MCC_HW_DEFAULT_SAMPLE_RATE 144000
+#define MCC_HW_DEFAULT_CHANNELS = 16

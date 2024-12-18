@@ -31,8 +31,6 @@
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 #include "driver/ledc.h"
 #endif
-// eof controls from dma -> EOF_CTRL undefined
-// #define EOF_CTRL 1
 
 #define TAG "esp32s3_ll"
 
@@ -65,21 +63,7 @@ static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
         return;
     }
     GDMA.channel[dma_num].in.int_clr.val = status.val;
-//#ifndef EOF_CTRL
-    if (status.in_dscr_empty)
-    {
-        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-    }
-//#endif
-//#ifdef EOF_CTRL
-    if (status.in_suc_eof)
-    {
-        //gpio_set_level(6,g6&1);
-        //g6++;
-        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-    }
-    
-//#endif
+
     if (status.in_done)
     {
         gpio_set_level(6,g6&1);
@@ -181,11 +165,9 @@ static void mcc_capture_ll_set_mode(int sample_rate, int channels)
     LCD_CAM.cam_ctrl.cam_byte_order = 0;         // 1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_bit_order = 0;          // 1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_line_int_en = 0;        // 1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
-#ifdef EOF_CTRL
-    LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
-#else
+
     LCD_CAM.cam_ctrl.cam_vs_eof_en = 1; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
-#endif
+
     LCD_CAM.cam_ctrl1.cam_line_int_num = 0;    // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0;         // 1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; // 1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
@@ -296,12 +278,9 @@ static esp_err_t mcc_capture_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-#ifdef MCC_HW_PSRAM
-    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST >> 5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
-#else
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
-#endif
+
 
     // GDMA.channel[dma_num].in.pri.rx_pri = 15;//rx prio 0-15
     // GDMA.channel[dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
@@ -345,11 +324,9 @@ void mcc_capture_ll_config(int *data_pins, int sample_rate, int channels, mcc_fr
 
     // set dma descriptor
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
-#ifdef EOF_CTRL
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
-#else
+
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
-#endif
+
     LCD_CAM.cam_ctrl.cam_update = 1;
     //  pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;

@@ -6,6 +6,14 @@
 #define RMT_TX_PIN (4)
 #define TX_BLOCK_SYMBOL (64)
 
+#define BIN_SIZE (3)
+#define TIME_SLOT_SIZE (BIN_SIZE * 16)
+#define MCC_WORD_SIZE (TIME_SLOT_SIZE * 11)
+#define FRAME_SIZE (13 * 16 * 3)
+
+
+
+
 #if 0
 typedef union {
     struct {
@@ -35,6 +43,19 @@ typedef struct mcc_code_word {
         uint16_t spid;
         uint8_t yz_mod;
 } mcc_code_word_t;
+
+#define DMA_FRAME 4032
+typedef  union {
+    struct  {
+           uint16_t rollback_buf[TIME_SLOT_SIZE*10];
+           uint16_t dma_capture_start[DMA_FRAME/2-TIME_SLOT_SIZE*10];//2016 *16 bit
+           uint16_t to_rollback_buf[TIME_SLOT_SIZE*10];
+         };
+    uint16_t buff[DMA_FRAME/2+TIME_SLOT_SIZE*10];
+} mcc_capture_buf_t;
+
+
+
 
 // mcc word decode one channel bit to bit
 int mcc_word_decode(uint8_t channel, uint8_t bit);

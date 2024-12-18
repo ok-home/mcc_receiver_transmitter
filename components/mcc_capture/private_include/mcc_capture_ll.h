@@ -8,18 +8,9 @@ extern "C"
 {
 #endif
 
-    /**
-     * @brief Data structure of logic analyzer frame buffer
-     */
     typedef struct
     {
-        uint8_t *buf; // Pointer to the sample data
-        size_t len;   // Length of the buffer in bytes
-    } mcc_fb_t;
-
-    typedef struct
-    {
-        mcc_fb_t fb;
+        uint8_t *buf[2];
         lldesc_t *dma; // Pointer of dma frame
     } mcc_frame_t;
 

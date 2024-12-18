@@ -474,19 +474,20 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
    bit &= 1;
    if (data->started == 0 && bit == 0)
    {
+      data->cnt_last_bit = 0;
+      data->last_bit = 0;
       return 0;
    }
-   else
-   {
-      data->started = true;
-   } // first bit
+
    data->last_bit += bit;
    data->cnt_last_bit += 1;
-   // printf("bit=%d last=%d cnt=%d\n",bit,data->last_bit,data->cnt_last_bit);
+   if(data->last_bit>1){  data->started = true;}
+
 
    if (data->cnt_last_bit >= 3)
    {
       uint8_t bit_val = data->last_bit > 1 ? 1 : 0;
+      //printf("bin=%d last=%d cnt=%d\n",bit_val,data->last_bit,data->cnt_last_bit);
       switch (data->cnt_bins)
       {
       case 0: // first bin in timeslot
@@ -496,16 +497,29 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
             data->miles |= 1 << 11;
          }
          data->miles >>= 1;
+
+         if (data->cnt_timeslots == 1) // check miles start 110
+         {
+            if (data->miles >> 9 != 3)
+            {
+               // clear all
+               //printf("clear miles ts=%d = %x \n", data->miles >> 9,data->cnt_timeslots);
+               memset(data, 0, sizeof(channel_decode_t));
+               return -1;
+            }
+         }
+
          if (data->cnt_timeslots == 2) // check miles start 110
          {
             if (data->miles >> 8 != 3)
             {
                // clear all
-               printf("clear miles = %x \n", data->miles >> 8);
+               //printf("clear miles = %x ts=%d \n", data->miles >> 8,data->cnt_timeslots);
                memset(data, 0, sizeof(channel_decode_t));
-               return -1;
+               return -2;
             }
          }
+
          data->cnt_bins += 1;
          break;
       case 6:
@@ -546,19 +560,24 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
             if (id_miles && id_spid) // found miles and spid
             {
                printf("id_miles = %d yz=%x id_spid=%d\n", id_miles->id, data->yz_mode, id_spid->id);
+               memset(data, 0, sizeof(channel_decode_t));
+               return 0;
             }
             else
             {
-               printf("not found\n");
+               printf("not found ");
+               printf("code_miles = 0x%x yz=0x%x code spid=0x%x\n", data->miles, data->yz_mode, data->spid);
+               memset(data, 0, sizeof(channel_decode_t));
+               return -10;
             }
-            memset(data, 0, sizeof(channel_decode_t));
-            return 0;
          }
          data->cnt_bins = 0;
          data->cnt_timeslots += 1;
          break;
       default:
-         if(bit_val){printf("noise\n");}
+         if(bit_val){
+            //printf("noise\n");
+            }
          data->cnt_bins += 1;
          break;
       } // end switch

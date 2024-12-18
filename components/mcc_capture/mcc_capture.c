@@ -21,64 +21,42 @@
 
 // frame buff & dma descripter
 static mcc_frame_t mcc_frame = {
-    .fb.buf = NULL,
-    .fb.len = 0, // bytes *** one sample = 2 byte
+    .buf[2] = NULL,
     .dma = NULL};
 
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
 static int mcc_capture_started = 0;              // flag start dma
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-//
-// esp32 only
-// sample sequence in 32 word - adr0=sample1, adr1=sample0
-// swap sample sequence
-//
-static inline void swap_buf(uint16_t *buf, int cnt)
-{
-    uint16_t tmp;
-    for (int i = 0; i < cnt; i += 2)
-    {
-        tmp = buf[i];
-        buf[i] = buf[i + 1];
-        buf[i + 1] = tmp;
-    }
-}
-#endif
-
 /**
  * @brief allocate dma descriptor
- *
- * @param uint32_t size - size of sample frame buffer (bytes)
- * @param uint8_t *buffer - pointer of sample frame buffer
  *
  * @return
  *     - dma descriptor ( NULL if no mem )
  */
- // ONLY 2 dma_frame
-static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
+ // ONLY 2 dma_frame buf0 & buf1 with DMA_FRAME size
+static lldesc_t *allocate_dma_descriptors(uint8_t *buf0, uint8_t *buf1)
 {
-    uint32_t count = size / DMA_FRAME;     //  dma frames count
-    if(count != 2) {return 0;} // only 2 dma frame
-    lldesc_t *dma = (lldesc_t *)heap_caps_malloc((count + 1) * sizeof(lldesc_t), MALLOC_CAP_DMA);
+    lldesc_t *dma = (lldesc_t *)heap_caps_malloc((2) * sizeof(lldesc_t), MALLOC_CAP_DMA); // only 2 descriptor
     if (dma == NULL)
     {
         return dma;
     }
-    int x = 0;
-    for (; x < count; x++)
-    {
-        dma[x].size = DMA_FRAME;
-        dma[x].length = DMA_FRAME;
-        dma[x].sosf = 0;
-        dma[x].eof = 0;
-        dma[x].owner = 1;
-        dma[x].buf = buffer + DMA_FRAME * x;
-        if(x==0)
-            {dma[x].empty = (uint32_t)&dma[(x + 1)];} // goto frame 1
-        else
-            {dma[x].empty = (uint32_t)&dma[(0)];} // non stop, goto frame0
-    }
+        dma[0].size = DMA_FRAME;
+        dma[0].length = DMA_FRAME;
+        dma[0].sosf = 0;
+        dma[0].eof = 0;
+        dma[0].owner = 1;
+        dma[0].buf = buf0;
+        dma[0].empty = (uint32_t)&dma[1]; // goto frame 1
+
+        dma[1].size = DMA_FRAME;
+        dma[1].length = DMA_FRAME;
+        dma[1].sosf = 0;
+        dma[1].eof = 0;
+        dma[1].owner = 1;
+        dma[1].buf = buf1;
+        dma[1].empty = (uint32_t)&dma[0]; // goto frame 0
+
     return dma;
 }
 /**
@@ -95,12 +73,6 @@ void mcc_capture_stop(void)
     {
         free(mcc_frame.dma);
         mcc_frame.dma = NULL;
-    }
-    if (mcc_frame.fb.buf)
-    {
-        free(mcc_frame.fb.buf);
-        mcc_frame.fb.buf = NULL;
-        mcc_frame.fb.len = 0;
     }
     // la status - stopped -> ready to new start
     mcc_capture_started = 0;
@@ -122,19 +94,14 @@ static void mcc_capture_task(void *arg)
         if (noTimeout == 1)                                                // dma data ready
         {
             // dma data ready
-#ifdef CONFIG_IDF_TARGET_ESP32
-            // esp32 -> sample sequence in 32 word - adr0=sample1, adr1=sample0
-            // swap sample sequence on esp32.
-            swap_buf((uint16_t *)mcc_frame.fb.buf, mcc_frame.fb.len / (cfg->number_channels / 8)); // 16 channels only on esp32
-#endif
-            cfg->mcc_capture_cb((uint8_t *)mcc_frame.fb.buf+(DMA_FRAME*(cnt&1)), 2016, mcc_capture_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
+            cfg->mcc_capture_cb(cnt&1);
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
        }
         else // timeout detected
         {
             printf("err notimeout %d",noTimeout);
-            //            cfg->mcc_capture_cb(NULL, 0, 0, 0); // timeout
+            //            cfg->mcc_capture_cb(-1); // timeout
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
         }
@@ -173,10 +140,6 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
     {
         goto _ret;
     }
-    if (config->number_channels != MCC_HW_MAX_CHANNELS)
-    {
-        goto _ret;
-    }
     // check GPIO num - 0-MAX_GPIO or num < 0 // todo use macros to legal pin definition // now it controlled from WS headers
     for (int i = 0; i < config->number_channels; i++)
     {
@@ -196,38 +159,23 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
         goto _ret;
     }
     // check number of samples
-    if (config->number_of_samples != 2016 )
+    if (config->number_of_samples != DMA_FRAME/2 )
     {
         goto _ret;
     }
-    // allocate frame buffer
-    uint32_t bytes_to_alloc = config->number_of_samples * (config->number_channels / 8)*2;//2*DMA_FRAME -> 
-    // alloc on RAM
-    uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA); // byte
-    if (largest_free_block < bytes_to_alloc + ((bytes_to_alloc / DMA_FRAME) + 1) * sizeof(lldesc_t))
+    if (config->buf0 == NULL || config->buf1 == NULL)
     {
-        bytes_to_alloc = largest_free_block - ((bytes_to_alloc / DMA_FRAME) + 2) * sizeof(lldesc_t); // free space with dma lldesc size
+        goto _ret;
     }
-    ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    mcc_frame.fb.len = bytes_to_alloc & ~0x3; // burst transfer word align
-    mcc_frame.fb.buf = heap_caps_calloc(mcc_frame.fb.len, 1, MALLOC_CAP_DMA);
-    //    mcc_frame.fb.buf = heap_caps_malloc(mcc_frame.fb.len, MALLOC_CAP_DMA);
-    ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    if (mcc_frame.fb.buf == NULL)
-    {
-        ret = ESP_ERR_NO_MEM;
-        goto _retcode;
-    }
-    ESP_LOGD("DMA HEAP", "Allocated %d bytes", mcc_frame.fb.len);
     //  allocate dma descriptor buffer
-    mcc_frame.dma = allocate_dma_descriptors(mcc_frame.fb.len, mcc_frame.fb.buf);
+    mcc_frame.dma = allocate_dma_descriptors(config->buf0, config->buf1);
     if (mcc_frame.dma == NULL)
     {
         ret = ESP_ERR_NO_MEM;
         goto _freebuf_ret;
     }
     // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
-    mcc_capture_ll_config(config->pin, config->sample_rate, config->number_channels, &mcc_frame);
+    mcc_capture_ll_config(config->pin, MCC_HW_DEFAULT_SAMPLE_RATE, MCC_HW_DEFAULT_CHANNELS, &mcc_frame);
     // start main task - check logic analyzer get data & call cb // todo -> test priority change
     if (pdPASS != xTaskCreate(mcc_capture_task, "mcc_task", MCC_TASK_STACK * 4, config, uxTaskPriorityGet(NULL) /*configMAX_PRIORITIES - 5*/, &mcc_capture_task_handle))
     {
@@ -249,8 +197,6 @@ _freetask_ret:
     vTaskDelete(mcc_capture_task_handle);
 _freedma_ret:
     free(mcc_frame.dma);
-_freebuf_ret:
-    free(mcc_frame.fb.buf);
 _retcode:
     mcc_capture_started = 0;
     return ret;

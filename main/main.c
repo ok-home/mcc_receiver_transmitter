@@ -63,14 +63,21 @@ void rmt_mcc_tx_task(void*p)
 
 }
 
-void mcc_decode_cb(uint8_t *samle_buf, int samples, int sample_rate, int channels)
+static mcc_capture_buf_t sample_buf[2] = {0};
+
+
+void mcc_decode_cb(int frame)
 {
-   uint16_t *samle_buf16 = (uint16_t *)samle_buf;
-   if (samples) // 2016
+   if (frame >= 0) // 2016
+    frame &= 1;
+    uint16_t *samle_buf16 = samle_buf[frame].buff;
+    memcpy((uint8_t)samle_buf[(~frame)&1].rollback_buf,(uint8_t)samle_buf[frame].to_rollback_buf,(TIME_SLOT_SIZE*10)*2);
    {
-      for (int i = 0; i < samples; i++)
+      for (int i = TIME_SLOT_SIZE*10; i < DMA_FRAME/2+TIME_SLOT_SIZE*10; i++)
       {
-         mcc_word_decode(0, samle_buf16[i] & (1));
+         int ret = mcc_word_decode(0, samle_buf16[i] & 1);
+         if(ret<0)
+            i += ret*TIME_SLOT_SIZE;
       }
    }
    // printf("end\n");
@@ -93,13 +100,9 @@ mcc_capture_config_t mcc_capture_config = {
     .pin[13] = -1,
     .pin[14] = -1,
     .pin[15] = -1,
-    .pin_trigger = -1,     // no trigger
-    .trigger_edge = 1,     // not use
-    .number_channels = 16, // already 16 cha
-    .sample_rate = 144000, // aready 144000 Hz = 144000/3 = 48000 * ( 3 samples in bin )
     .meashure_timeout = 20,// 200 millisek
-    .number_of_samples = 2016,  //samples in dma frame 4032/2=2016 - around 4 mcc word (3*16*11=528 sample), 2 frame ping/pong
-    .samples_to_psram = 0,       // already in ram
+    .buf0 = (uint8_t*)sample_buf[0].dma_capture_start;
+    .buf1 = (uint8_t*)sample_buf[1].dma_capture_start;
     .mcc_capture_cb = mcc_decode_cb};
 
 
