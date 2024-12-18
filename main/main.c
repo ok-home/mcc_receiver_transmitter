@@ -106,7 +106,7 @@ mcc_capture_config_t mcc_capture_config = {
     .mcc_capture_cb = mcc_decode_cb};
 
 
-extern void test();
+//extern void test();
 void app_main(void)
 {
     gpio_reset_pin(5);
@@ -118,8 +118,8 @@ void app_main(void)
 
     vTaskDelay(100);
 
-    //esp_err_t ret = start_mcc_capture(&mcc_capture_config);
+    esp_err_t ret = start_mcc_capture(&mcc_capture_config);
 
-    test();
+    //test();
 
 }
