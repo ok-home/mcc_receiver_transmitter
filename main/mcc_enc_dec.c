@@ -476,8 +476,10 @@ int IRAM_ATTR id_code_compare(const void *a, const void *b)
 // mcc word decode one channel bit to bit
 int IRAM_ATTR mcc_word_decode(uint8_t channel, uint8_t bit)
 {
+
    channel_decode_t *data = &channel_data[channel];
    bit &= 1;
+
    if (data->started == 0 && bit == 0)
    {
       data->cnt_last_bit = 0;
@@ -488,6 +490,7 @@ int IRAM_ATTR mcc_word_decode(uint8_t channel, uint8_t bit)
    data->last_bit += bit;
    data->cnt_last_bit += 1;
    if(data->last_bit>1){  data->started = true;}
+
 
 
    if (data->cnt_last_bit >= 3)

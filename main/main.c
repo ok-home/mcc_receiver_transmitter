@@ -49,7 +49,7 @@ void rmt_mcc_tx_task(void *p)
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
-        .loop_count = 0,
+        .loop_count = 8,
     };
     rmt_mcc_word_encode(&tst_word, &rmt_word);
     while (1)
@@ -66,6 +66,7 @@ static mcc_capture_buf_t sample_buf[2] = {0};
 
 void IRAM_ATTR mcc_decode_cb(int frame)
 {
+    
     //    printf("frame=%d %d\n",frame,frame^1);
     if (frame >= 0) // 2016
     {
@@ -92,20 +93,20 @@ mcc_capture_config_t mcc_capture_config = {
     .pin[0] = 4,
     .pin[1] = 4,
     .pin[2] = 4,
-    .pin[3] = 4,
-    .pin[4] = 4,
-    .pin[5] = 4,
-    .pin[6] = 4,
-    .pin[7] = 4,
-    .pin[8] = 4,
-    .pin[9] = 4,
-    .pin[10] = 4,
-    .pin[11] = 4,
-    .pin[12] = 4,
-    .pin[13] = 4,
-    .pin[14] = 4,
-    .pin[15] = 4,
-    .meashure_timeout = 20, // 200 millisek
+    .pin[3] = 7,
+    .pin[4] = 7,
+    .pin[5] = 7,
+    .pin[6] = 7,
+    .pin[7] = 7,
+    .pin[8] = 7,
+    .pin[9] = 7,
+    .pin[10] = 7,
+    .pin[11] = 7,
+    .pin[12] = 7,
+    .pin[13] = 7,
+    .pin[14] = 7,
+    .pin[15] = 7,
+    .meashure_timeout = 200, // 200 millisek
     .buf0 = (uint8_t *)sample_buf[0].dma_capture_start,
     .buf1 = (uint8_t *)sample_buf[1].dma_capture_start,
     .mcc_capture_cb = mcc_decode_cb};
@@ -117,6 +118,14 @@ void app_main(void)
     gpio_set_direction(5, GPIO_MODE_OUTPUT);
     gpio_reset_pin(6);
     gpio_set_direction(6, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(7);
+    gpio_set_direction(7, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(8);
+    gpio_set_direction(8, GPIO_MODE_OUTPUT);
+
+    gpio_set_level(7, 0);
+    gpio_set_level(8, 1);
+
 
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 
