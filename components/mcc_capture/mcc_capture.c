@@ -12,18 +12,14 @@
 #include "soc/dport_access.h"
 #include "esp_log.h"
 #include "string.h"
-#include "rom/cache.h"
-#include "esp_cache.h" //esp_mm
-#include "esp_psram.h"
+
+#include "esp_timer.h"
 
 #define MCC_TASK_STACK 2048
 #define DMA_FRAME 4032
 
 // frame buff & dma descripter
-static mcc_frame_t mcc_frame = {
-    .buf[2] = NULL,
-    .dma = NULL};
-
+static mcc_frame_t mcc_frame ;
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
 static int mcc_capture_started = 0;              // flag start dma
 
@@ -83,7 +79,7 @@ void mcc_capture_stop(void)
  *       callback param = 0 if timeout or reset
  *  @param *arg - pointer to callback function from cfg
  */
-static void mcc_capture_task(void *arg)
+ void IRAM_ATTR mcc_capture_task(void *arg)
 {
     int noTimeout;
     mcc_capture_config_t *cfg = (mcc_capture_config_t *)arg;
@@ -94,13 +90,16 @@ static void mcc_capture_task(void *arg)
         if (noTimeout == 1)                                                // dma data ready
         {
             // dma data ready
+            int64_t t0 = esp_timer_get_time();
             cfg->mcc_capture_cb(cnt&1);
+            int64_t t1 = esp_timer_get_time();
+            printf("time %lld\n",t1-t0);
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
        }
         else // timeout detected
         {
-            printf("err notimeout %d",noTimeout);
+            printf("err notimeout %d ------------------------\n",noTimeout);
             //            cfg->mcc_capture_cb(-1); // timeout
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
@@ -108,7 +107,7 @@ static void mcc_capture_task(void *arg)
         //printf("notmo=%d cnt %d\n",noTimeout,cnt);
         // debug - stop after 100 cb
         cnt++;
-        if(cnt==100) {mcc_capture_ll_stop(); 
+        if(cnt==20) {mcc_capture_ll_stop(); 
         cnt=0;
         vTaskDelete(mcc_capture_task_handle);}
     }
@@ -141,27 +140,12 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
         goto _ret;
     }
     // check GPIO num - 0-MAX_GPIO or num < 0 // todo use macros to legal pin definition // now it controlled from WS headers
-    for (int i = 0; i < config->number_channels; i++)
+    for (int i = 0; i < MCC_HW_DEFAULT_CHANNELS; i++)
     {
         if (config->pin[i] > MCC_HW_MAX_GPIO || config->pin[i] < MCC_HW_MIN_GPIO)
         {
             goto _ret;
         }
-    }
-    if (config->pin_trigger != MCC_HW_MIN_GPIO) // no trigger already
-    {
-        goto _ret;
-    }
-    // check intr edge
-    // check sample rate
-    if (config->sample_rate != MCC_HW_DEFAULT_SAMPLE_RATE)
-    {
-        goto _ret;
-    }
-    // check number of samples
-    if (config->number_of_samples != DMA_FRAME/2 )
-    {
-        goto _ret;
     }
     if (config->buf0 == NULL || config->buf1 == NULL)
     {
@@ -172,12 +156,12 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
     if (mcc_frame.dma == NULL)
     {
         ret = ESP_ERR_NO_MEM;
-        goto _freebuf_ret;
+        goto _ret;
     }
     // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
     mcc_capture_ll_config(config->pin, MCC_HW_DEFAULT_SAMPLE_RATE, MCC_HW_DEFAULT_CHANNELS, &mcc_frame);
     // start main task - check logic analyzer get data & call cb // todo -> test priority change
-    if (pdPASS != xTaskCreate(mcc_capture_task, "mcc_task", MCC_TASK_STACK * 4, config, uxTaskPriorityGet(NULL) /*configMAX_PRIORITIES - 5*/, &mcc_capture_task_handle))
+    if (pdPASS != xTaskCreatePinnedToCore(mcc_capture_task, "mcc_task", MCC_TASK_STACK * 4, config, configMAX_PRIORITIES-1 , &mcc_capture_task_handle,1))
     {
         ret = ESP_ERR_NO_MEM;
         goto _freedma_ret;
@@ -197,7 +181,7 @@ _freetask_ret:
     vTaskDelete(mcc_capture_task_handle);
 _freedma_ret:
     free(mcc_frame.dma);
-_retcode:
+
     mcc_capture_started = 0;
     return ret;
 _ret:

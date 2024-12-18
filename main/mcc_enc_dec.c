@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "esp_attr.h"
 #include "mcc_encoder.h"
 
 #define WIN_SIZE (3)
@@ -21,16 +22,21 @@ typedef struct bins
 } bins_t;
 typedef struct channel_decode
 {
-   uint8_t started;
-   uint8_t cnt_bins;
-   uint8_t cnt_timeslots;
-   uint8_t cnt_last_bit; // 0-3
-   uint8_t last_bit;     // last 3 bit
-   uint8_t y_mode;
-   uint8_t z_mode;
-   uint8_t yz_mode;
-   uint16_t miles;
-   uint16_t spid;
+   uint32_t started;
+   uint32_t cnt_bins;
+   uint32_t cnt_timeslots;
+   uint32_t cnt_last_bit; // 0-3
+   uint32_t last_bit;     // last 3 bit
+   uint32_t y_mode;
+   uint32_t z_mode;
+   uint32_t yz_mode;
+   uint32_t miles;
+   uint32_t spid;
+   uint32_t bit0 ;
+   uint32_t bit6 ;
+   uint32_t bit8 ;
+   uint32_t bit10 ;
+
    bins_t mcc_word; // bins 0-6-8-10
 } channel_decode_t;
 
@@ -38,8 +44,8 @@ static channel_decode_t channel_data[16] = {0};
 
 typedef struct id_code
 {
-   uint16_t id;
-   uint16_t code;
+   uint32_t id;
+   uint32_t code;
 } id_code_t;
 
 const id_code_t miles_id_sort[38] = {
@@ -461,14 +467,14 @@ const uint16_t model[] =
 };
 #endif
 // comparator for binsearch
-static int id_code_compare(const void *a, const void *b)
+int IRAM_ATTR id_code_compare(const void *a, const void *b)
 {
    id_code_t *aa = (id_code_t *)a;
    id_code_t *bb = (id_code_t *)b;
    return (aa->code - bb->code);
 }
 // mcc word decode one channel bit to bit
-int mcc_word_decode(uint8_t channel, uint8_t bit)
+int IRAM_ATTR mcc_word_decode(uint8_t channel, uint8_t bit)
 {
    channel_decode_t *data = &channel_data[channel];
    bit &= 1;
@@ -523,26 +529,26 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
          data->cnt_bins += 1;
          break;
       case 6:
-         data->mcc_word.bit6 = bit_val;
+         data->bit6 = bit_val;
          data->cnt_bins += 1;
          break;
       case 8:
-         data->mcc_word.bit8 = bit_val;
+         data->bit8 = bit_val;
          data->cnt_bins += 1;
          break;
       case 10:
-         data->mcc_word.bit10 = bit_val;
+         data->bit10 = bit_val;
          data->cnt_bins += 1;
          break;
       case 15: // last bin in timeslot
-         if (data->mcc_word.bit6 || data->mcc_word.bit8 || data->mcc_word.bit10)
+         if (data->bit6 || data->bit8 || data->bit10)
          {
             data->spid |= 1 << 11;
 
             data->y_mode <<= 1;
             data->z_mode <<= 1;
-            data->y_mode |= data->mcc_word.bit6;
-            data->z_mode |= data->mcc_word.bit10;
+            data->y_mode |= data->bit6;
+            data->z_mode |= data->bit10;
          }
          data->spid >>= 1;
 
@@ -559,14 +565,17 @@ int mcc_word_decode(uint8_t channel, uint8_t bit)
 
             if (id_miles && id_spid) // found miles and spid
             {
-               printf("id_miles = %d yz=%x id_spid=%d\n", id_miles->id, data->yz_mode, id_spid->id);
+               //printf("id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, data->yz_mode, id_spid->id);
+            if(id_miles->id != 12 || id_spid->id != 211 || data->yz_mode != 0x1a){printf("error decode\n");}
+
                memset(data, 0, sizeof(channel_decode_t));
                return 0;
             }
             else
             {
-               printf("not found ");
-               printf("code_miles = 0x%x yz=0x%x code spid=0x%x\n", data->miles, data->yz_mode, data->spid);
+               printf("not found\n");
+
+               //printf(" not found code_miles = 0x%lx yz=0x%lx code spid=0x%lx\n", data->miles, data->yz_mode, data->spid);
                memset(data, 0, sizeof(channel_decode_t));
                return -10;
             }
@@ -654,7 +663,7 @@ void rmt_mcc_word_encode(mcc_code_word_t *mcc_word, rmt_mcc_word_t *rmt_word)
       }
    }
 }
-
+/**
 void test()
 {
    for(int i=240;i<sizeof(model)/2;i++)
@@ -662,3 +671,4 @@ void test()
       mcc_word_decode(0,model[i]);
    }
 }
+*/

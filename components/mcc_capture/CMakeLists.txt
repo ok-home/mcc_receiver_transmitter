@@ -9,8 +9,7 @@ set( priv_includedir
     )
 set( priv_require 
     driver
-    esp_mm
-    esp_psram 
+    esp_timer
     )
 
   if(IDF_TARGET STREQUAL "esp32")
