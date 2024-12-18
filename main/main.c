@@ -49,7 +49,7 @@ void rmt_mcc_tx_task(void *p)
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
-        .loop_count = 8,
+        .loop_count = 0,
     };
     rmt_mcc_word_encode(&tst_word, &rmt_word);
     while (1)
@@ -120,7 +120,7 @@ void app_main(void)
 
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 
-    vTaskDelay(100);
+    vTaskDelay(10);
 
     esp_err_t ret = start_mcc_capture(&mcc_capture_config);
 
