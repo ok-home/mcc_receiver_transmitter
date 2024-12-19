@@ -20,6 +20,7 @@
 
 // frame buff & dma descripter
 static mcc_frame_t mcc_frame ;
+static lldesc_t *mcc_frame_dma;
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
 static int mcc_capture_started = 0;              // flag start dma
 
@@ -93,7 +94,7 @@ void mcc_capture_stop(void)
             int64_t t0 = esp_timer_get_time();
             cfg->mcc_capture_cb(cnt&1);
             int64_t t1 = esp_timer_get_time();
-            printf("time %lld\n",t1-t0);
+            //printf("time %lld\n",t1-t0);
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
        }
@@ -107,10 +108,10 @@ void mcc_capture_stop(void)
         //printf("notmo=%d cnt %d\n",noTimeout,cnt);
         // debug - stop after 100 cb
         cnt++;
-        if(cnt==200) {mcc_capture_ll_stop(); 
-        cnt=0;
-        printf("stop task\n");
-        vTaskDelete(mcc_capture_task_handle);}
+        //if(cnt==10) {mcc_capture_ll_stop(); 
+        //cnt=0;
+        //printf("stop task\n");
+        //vTaskDelete(mcc_capture_task_handle);}
     }
 }
 /**

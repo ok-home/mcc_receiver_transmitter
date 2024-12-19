@@ -49,7 +49,7 @@ void rmt_mcc_tx_task(void *p)
     };
     rmt_mcc_tx_init();
     rmt_transmit_config_t rmt_tx_config = {
-        .loop_count = 8,
+        .loop_count = 2,
     };
     rmt_mcc_word_encode(&tst_word, &rmt_word);
     while (1)
@@ -58,7 +58,8 @@ void rmt_mcc_tx_task(void *p)
         ESP_ERROR_CHECK(rmt_transmit(tx_chan_handle, tx_encoder, &rmt_word, sizeof(rmt_word), &rmt_tx_config));
         rmt_tx_wait_all_done(tx_chan_handle, portMAX_DELAY);
         gpio_set_level(5, 0);
-        vTaskDelay(1);
+        printf("done\n");
+        vTaskDelay(500);
     }
 }
 
@@ -66,28 +67,23 @@ static mcc_capture_buf_t sample_buf[2] = {0};
 
 extern uint16_t *decode_offset[16];
 
-void IRAM_ATTR mcc_decode_cb(int frame)
+void  mcc_decode_cb(int frame)
 {
-    
+
     //    printf("frame=%d %d\n",frame,frame^1);
     if (frame >= 0) // 2016
     {
         frame &= 1;
         uint16_t *sample_buf16 = sample_buf[frame].buff;
         memcpy((uint8_t *)sample_buf[frame ^ 1].rollback_buf, (uint8_t *)sample_buf[frame].to_rollback_buf, (TIME_SLOT_SIZE * 11) * 2);
-        for(int ch=0;ch<16;ch++){
-            // from previous buff
-            decode_offset[ch] = (decode_offset[ch] == NULL) ? NULL : decode_offset[ch] - sample_buf[frame ^ 1].to_rollback_buf + sample_buf[frame].buff; 
-
-        for (int i = 0; i < DMA_FRAME / 2 ; i++)
+        for (int ch = 0; ch < 16; ch++)
         {
-            int ret = mcc_word_decode(ch, &sample_buf16[i]);
-            if (ret < 0)
-            {
-                //i += ret * TIME_SLOT_SIZE;
-                // printf("ret=%d\n",ret);
-            }
+            // from previous buff
+            decode_offset[ch] = (decode_offset[ch] == NULL) ? NULL : decode_offset[ch] - sample_buf[frame ^ 1].to_rollback_buf + sample_buf[frame].buff;
         }
+        for (int i = 0; i < DMA_FRAME / 2; i++)
+        {
+            mcc_word_decode(&sample_buf16[i]);
         }
     }
     // printf("end\n");
@@ -95,7 +91,7 @@ void IRAM_ATTR mcc_decode_cb(int frame)
 
 mcc_capture_config_t mcc_capture_config = {
     .pin[0] = 4,
-    .pin[1] = 4,
+    .pin[1] = 7,
     .pin[2] = 4,
     .pin[3] = 7,
     .pin[4] = 7,
@@ -103,10 +99,10 @@ mcc_capture_config_t mcc_capture_config = {
     .pin[6] = 7,
     .pin[7] = 7,
     .pin[8] = 7,
-    .pin[9] = 7,
+    .pin[9] = 4,
     .pin[10] = 7,
     .pin[11] = 7,
-    .pin[12] = 7,
+    .pin[12] = 4,
     .pin[13] = 7,
     .pin[14] = 7,
     .pin[15] = 7,
@@ -129,7 +125,6 @@ void app_main(void)
 
     gpio_set_level(7, 0);
     gpio_set_level(8, 1);
-
 
     xTaskCreate(rmt_mcc_tx_task, "rmt tx", 4096, NULL, 5, NULL);
 

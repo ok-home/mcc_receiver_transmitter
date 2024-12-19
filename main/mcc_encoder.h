@@ -58,7 +58,7 @@ typedef  union {
 
 
 // mcc word decode one channel bit to bit
-int mcc_word_decode(uint8_t channel, uint16_t *ptr);
+int mcc_word_decode(uint16_t *ptr);
 // encode mcc word to  rmt words
 void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word);
 
