@@ -9,7 +9,7 @@
 #define BIN_SIZE (3)
 #define TIME_SLOT_SIZE (BIN_SIZE * 16)
 #define MCC_WORD_SIZE (TIME_SLOT_SIZE * 11)
-#define FRAME_SIZE (13 * 16 * 3)
+
 
 
 

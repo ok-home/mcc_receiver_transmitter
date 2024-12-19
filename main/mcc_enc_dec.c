@@ -6,39 +6,6 @@
 #include "esp_attr.h"
 #include "mcc_encoder.h"
 
-#define WIN_SIZE (3)
-#define BIN_SIZE (3)
-#define TIME_SLOT_SIZE (BIN_SIZE * 16)
-#define MCC_WORD_SIZE (TIME_SLOT_SIZE * 11)
-#define FRAME_SIZE (13 * 16 * 3)
-
-typedef struct bins
-{
-   uint8_t bit0 : 1;
-   uint8_t bit6 : 1;
-   uint8_t bit8 : 1;
-   uint8_t bit10 : 1;
-   uint8_t bit_spare : 4;
-} bins_t;
-typedef struct channel_decode
-{
-   uint32_t started;
-   uint32_t cnt_bins;
-   uint32_t cnt_timeslots;
-   uint32_t cnt_last_bit; // 0-3
-   uint32_t last_bit;     // last 3 bit
-   uint32_t y_mode;
-   uint32_t z_mode;
-   uint32_t yz_mode;
-   uint32_t miles;
-   uint32_t spid;
-   uint32_t bit0;
-   uint32_t bit6;
-   uint32_t bit8;
-   uint32_t bit10;
-} channel_decode_t;
-
-static channel_decode_t channel_data[16] = {0};
 
 typedef struct id_code
 {
@@ -482,8 +449,10 @@ int mcc_word_decode(uint16_t *ptr)
       uint32_t y_mode = 0;
       uint32_t z_mode = 0;
       uint32_t yz_mode = 0;
-
+      uint32_t miles = 0;
+      uint32_t spid = 0;
       uint16_t *mem_ptr = ptr; // channel_array[channel].decode_bit_offset;
+
       if (mem_ptr <= decode_offset[channel])
          continue; // already decoded
       if ((*mem_ptr & (1 << channel)) == 0)
@@ -491,8 +460,6 @@ int mcc_word_decode(uint16_t *ptr)
          decode_offset[channel] = ptr;
          continue; // not found
       }
-      uint32_t miles = 0;
-      uint32_t spid = 0;
       // miles
       for (int i = 0; i < 11; i++)
       {
@@ -507,6 +474,7 @@ int mcc_word_decode(uint16_t *ptr)
       {
          continue;
       }
+
       id_code_t code_miles = {0, miles};
       id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
       if (id_miles == 0)
@@ -537,6 +505,7 @@ int mcc_word_decode(uint16_t *ptr)
          spid >>= 1;
       }
       yz_mode = (y_mode << 4) | z_mode;
+
       id_code_t code_spid = {0, spid};
       id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_id_code_sort, 331, sizeof(id_code_t), id_code_compare);
       if (id_spid == 0)
