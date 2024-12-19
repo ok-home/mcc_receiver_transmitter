@@ -17,7 +17,7 @@
 #include "mcc_encoder.h"
 #include "mcc_capture.h"
 
-static const char *TAG = "MCC TEST";
+//static const char *TAG = "MCC TEST";
 
 static rmt_channel_handle_t tx_chan_handle = NULL;
 static rmt_encoder_handle_t tx_encoder = NULL;
@@ -130,7 +130,7 @@ void app_main(void)
 
     vTaskDelay(10);
 
-    esp_err_t ret = start_mcc_capture(&mcc_capture_config);
+    start_mcc_capture(&mcc_capture_config);
 
     // test();
 }

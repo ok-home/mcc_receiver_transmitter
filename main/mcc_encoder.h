@@ -10,8 +10,7 @@
 #define TIME_SLOT_SIZE (BIN_SIZE * 16)
 #define MCC_WORD_SIZE (TIME_SLOT_SIZE * 11)
 
-
-
+#define DMA_FRAME 4032
 
 
 #if 0
@@ -38,13 +37,6 @@ typedef struct rmt_mcc_word {
    rmt_symbol_word_t rmt_stop;
 } rmt_mcc_word_t;
 
-typedef struct mcc_code_word {
-        uint16_t miles;
-        uint16_t spid;
-        uint8_t yz_mod;
-} mcc_code_word_t;
-
-#define DMA_FRAME 4032
 typedef  union {
     struct  {
            uint16_t rollback_buf[TIME_SLOT_SIZE*11];
@@ -54,11 +46,20 @@ typedef  union {
     uint16_t buff[DMA_FRAME/2+TIME_SLOT_SIZE*11];
 } mcc_capture_buf_t;
 
+typedef struct mcc_code_word {
+        uint16_t miles;
+        uint16_t spid;
+        uint8_t yz_mod;
+} mcc_code_word_t;
+
+
+
+
 
 
 
 // mcc word decode one channel bit to bit
-int mcc_word_decode(uint16_t *ptr);
+void mcc_word_decode( uint16_t *ptr);
 // encode mcc word to  rmt words
 void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word);
 

@@ -7,6 +7,9 @@
 #include "mcc_encoder.h"
 
 
+
+
+
 typedef struct id_code
 {
    uint32_t id;
@@ -432,7 +435,7 @@ const uint16_t model[] =
 };
 #endif
 // comparator for binsearch
-int id_code_compare(const void *a, const void *b)
+static int id_code_compare(const void *a, const void *b)
 {
    id_code_t *aa = (id_code_t *)a;
    id_code_t *bb = (id_code_t *)b;
@@ -442,7 +445,7 @@ int id_code_compare(const void *a, const void *b)
 uint16_t *decode_offset[16] = {0};
 
 // mcc word decode one channel bit to bit
-int mcc_word_decode(uint16_t *ptr)
+void mcc_word_decode( uint16_t *ptr)
 {
    for (uint32_t channel = 0; channel < 16; channel++)
    {
@@ -451,11 +454,11 @@ int mcc_word_decode(uint16_t *ptr)
       uint32_t yz_mode = 0;
       uint32_t miles = 0;
       uint32_t spid = 0;
-      uint16_t *mem_ptr = ptr; // channel_array[channel].decode_bit_offset;
+      //uint16_t *ptr = ptr; // channel_array[channel].decode_bit_offset;
 
-      if (mem_ptr <= decode_offset[channel])
+      if (ptr <= decode_offset[channel])
          continue; // already decoded
-      if ((*mem_ptr & (1 << channel)) == 0)
+      if ((*ptr & (1 << channel)) == 0)
       {
          decode_offset[channel] = ptr;
          continue; // not found
@@ -463,7 +466,7 @@ int mcc_word_decode(uint16_t *ptr)
       // miles
       for (int i = 0; i < 11; i++)
       {
-         uint32_t bit0 = ((mem_ptr[(TIME_SLOT_SIZE * i)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 1] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 2] >> channel) & 1);
+         uint32_t bit0 = ((ptr[(TIME_SLOT_SIZE * i)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 1] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 2] >> channel) & 1);
          if (bit0 > 1)
          {
             miles |= 1 << 11;
@@ -485,9 +488,9 @@ int mcc_word_decode(uint16_t *ptr)
 
       for (int i = 0; i < 11; i++)
       {
-         uint32_t bit6 = ((mem_ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 6)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 6)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 6)] >> channel) & 1);
-         uint32_t bit8 = ((mem_ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 8)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 8)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 8)] >> channel) & 1);
-         uint32_t bit10 = ((mem_ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 10)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 10)] >> channel) & 1) + ((mem_ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 10)] >> channel) & 1);
+         uint32_t bit6 = ((ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 6)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 6)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 6)] >> channel) & 1);
+         uint32_t bit8 = ((ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 8)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 8)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 8)] >> channel) & 1);
+         uint32_t bit10 = ((ptr[(TIME_SLOT_SIZE * i) + (BIN_SIZE * 10)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 1 + (BIN_SIZE * 10)] >> channel) & 1) + ((ptr[(TIME_SLOT_SIZE * i) + 2 + (BIN_SIZE * 10)] >> channel) & 1);
 
          bit6 = bit6 > 1 ? 1 : 0;
          bit8 = bit8 > 1 ? 1 : 0;
@@ -514,10 +517,9 @@ int mcc_word_decode(uint16_t *ptr)
          continue;
       }
       printf("id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, yz_mode, id_spid->id);
-      decode_offset[channel] = mem_ptr + MCC_WORD_SIZE - TIME_SLOT_SIZE;
+      decode_offset[channel] = ptr + MCC_WORD_SIZE - TIME_SLOT_SIZE;
       continue;
    }
-   return 0;
 }
 
 static uint16_t mcc_get_miles_code(uint16_t mil)
