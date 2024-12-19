@@ -64,6 +64,8 @@ void rmt_mcc_tx_task(void *p)
 
 static mcc_capture_buf_t sample_buf[2] = {0};
 
+extern uint16_t *decode_offset[16];
+
 void IRAM_ATTR mcc_decode_cb(int frame)
 {
     
@@ -71,16 +73,18 @@ void IRAM_ATTR mcc_decode_cb(int frame)
     if (frame >= 0) // 2016
     {
         frame &= 1;
-        uint16_t *samle_buf16 = sample_buf[frame].buff;
-        memcpy((uint8_t *)sample_buf[frame ^ 1].rollback_buf, (uint8_t *)sample_buf[frame].to_rollback_buf, (TIME_SLOT_SIZE * 10) * 2);
+        uint16_t *sample_buf16 = sample_buf[frame].buff;
+        memcpy((uint8_t *)sample_buf[frame ^ 1].rollback_buf, (uint8_t *)sample_buf[frame].to_rollback_buf, (TIME_SLOT_SIZE * 11) * 2);
         for(int ch=0;ch<16;ch++){
+            // from previous buff
+            decode_offset[ch] = (decode_offset[ch] == NULL) ? NULL : decode_offset[ch] - sample_buf[frame ^ 1].to_rollback_buf + sample_buf[frame].buff; 
 
-        for (int i = TIME_SLOT_SIZE * 10; i < DMA_FRAME / 2 + TIME_SLOT_SIZE * 10; i++)
+        for (int i = 0; i < DMA_FRAME / 2 ; i++)
         {
-            int ret = mcc_word_decode(ch, (samle_buf16[i]>>ch) & 1);
+            int ret = mcc_word_decode(ch, &sample_buf16[i]);
             if (ret < 0)
             {
-                i += ret * TIME_SLOT_SIZE;
+                //i += ret * TIME_SLOT_SIZE;
                 // printf("ret=%d\n",ret);
             }
         }

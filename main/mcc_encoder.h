@@ -47,18 +47,18 @@ typedef struct mcc_code_word {
 #define DMA_FRAME 4032
 typedef  union {
     struct  {
-           uint16_t rollback_buf[TIME_SLOT_SIZE*10];
-           uint16_t dma_capture_start[DMA_FRAME/2-TIME_SLOT_SIZE*10];//2016 *16 bit
-           uint16_t to_rollback_buf[TIME_SLOT_SIZE*10];
+           uint16_t rollback_buf[TIME_SLOT_SIZE*11];
+           uint16_t dma_capture_start[DMA_FRAME/2-TIME_SLOT_SIZE*11];//2016 *16 bit
+           uint16_t to_rollback_buf[TIME_SLOT_SIZE*11];
          };
-    uint16_t buff[DMA_FRAME/2+TIME_SLOT_SIZE*10];
+    uint16_t buff[DMA_FRAME/2+TIME_SLOT_SIZE*11];
 } mcc_capture_buf_t;
 
 
 
 
 // mcc word decode one channel bit to bit
-int mcc_word_decode(uint8_t channel, uint8_t bit);
+int mcc_word_decode(uint8_t channel, uint16_t *ptr);
 // encode mcc word to  rmt words
 void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word);
 
