@@ -36,8 +36,6 @@ typedef struct channel_decode
    uint32_t bit6 ;
    uint32_t bit8 ;
    uint32_t bit10 ;
-
-   bins_t mcc_word; // bins 0-6-8-10
 } channel_decode_t;
 
 static channel_decode_t channel_data[16] = {0};
@@ -467,14 +465,14 @@ const uint16_t model[] =
 };
 #endif
 // comparator for binsearch
-int IRAM_ATTR id_code_compare(const void *a, const void *b)
+int  id_code_compare(const void *a, const void *b)
 {
    id_code_t *aa = (id_code_t *)a;
    id_code_t *bb = (id_code_t *)b;
    return (aa->code - bb->code);
 }
 // mcc word decode one channel bit to bit
-int IRAM_ATTR mcc_word_decode(uint8_t channel, uint8_t bit)
+int  mcc_word_decode(uint8_t channel, uint8_t bit)
 {
 
    channel_decode_t *data = &channel_data[channel];
@@ -500,8 +498,8 @@ int IRAM_ATTR mcc_word_decode(uint8_t channel, uint8_t bit)
       switch (data->cnt_bins)
       {
       case 0: // first bin in timeslot
-         data->mcc_word.bit0 = bit_val;
-         if (data->mcc_word.bit0)
+         data->bit0 = bit_val;
+         if (data->bit0)
          {
             data->miles |= 1 << 11;
          }
