@@ -15,7 +15,6 @@
 #include "esp_timer.h"
 
 #define MCC_TASK_STACK 2048
-#define DMA_FRAME 4032
 
 // frame buff & dma descripter
 static mcc_frame_t mcc_frame ;
@@ -90,9 +89,9 @@ void mcc_capture_stop(void)
         if (noTimeout == 1)                                                // dma data ready
         {
             // dma data ready
-            int64_t t0 = esp_timer_get_time();
+            //int64_t t0 = esp_timer_get_time();
             cfg->mcc_capture_cb(cnt&1);
-            int64_t t1 = esp_timer_get_time();
+            //int64_t t1 = esp_timer_get_time();
             //printf("time %lld\n",t1-t0);
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);

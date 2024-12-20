@@ -6,9 +6,9 @@
 #include "mcc_encoder.h"
 
 
-extern id_code_t *miles_id_sort;
-extern id_code_t *miles_code_sort;
-extern id_code_t *spid_id_code_sort;
+extern id_code_t miles_id_sort[];
+extern id_code_t miles_code_sort[];
+extern id_code_t spid_id_code_sort[];
 
 uint16_t *decode_offset[16] = {0};
 

@@ -17,6 +17,7 @@
 #include "soc/gdma_reg.h"
 #include "esp_rom_gpio.h"
 #include "esp_log.h"
+#include "driver/ledc.h"
 
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_periph.h"
