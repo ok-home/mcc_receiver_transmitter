@@ -33,7 +33,7 @@
 #include "driver/ledc.h"
 #endif
 
-#define TAG "esp32s3_ll"
+#define TAG "mcc_capture_ll"
 
 #include "mcc_encoder.h"
 
@@ -48,13 +48,7 @@
 #endif
 static intr_handle_t isr_handle;
 static int dma_num = 0;
-//  trigger isr handle -> start transfer
-void IRAM_ATTR mcc_ll_trigger_isr(void *pin)
-{
-    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // enable cam
-    gpio_intr_disable((int)pin);
-}
-// transfer done -> eof isr from dma descr_empty
+// transfer done ->  isr ping/pong from dma descriptor done
 static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;

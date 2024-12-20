@@ -19,9 +19,6 @@ static int id_code_compare(const void *a, const void *b)
    id_code_t *bb = (id_code_t *)b;
    return (aa->code - bb->code);
 }
-
-
-
 // mcc word decode one channel bit to bit
 void mcc_word_decode( uint16_t *ptr)
 {
@@ -99,7 +96,6 @@ void mcc_word_decode( uint16_t *ptr)
       continue;
    }
 }
-
 static uint16_t mcc_get_miles_code(uint16_t mil)
 {                                  // from 0 to 36
    return miles_id_sort[mil].code; // 010 0110 1011
