@@ -15,7 +15,7 @@
 #include "driver/rmt_encoder.h"
 
 #include "mcc_encoder.h"
-#include "mcc_capture.h"
+
 
 //static const char *TAG = "MCC TEST";
 
@@ -64,13 +64,11 @@ void rmt_mcc_tx_task(void *p)
 }
 
 static mcc_capture_buf_t sample_buf[2] = {0};
-
 extern uint16_t *decode_offset[16];
 
 void  mcc_decode_cb(int frame)
 {
 
-    //    printf("frame=%d %d\n",frame,frame^1);
     if (frame >= 0) // 2016
     {
         frame &= 1;
@@ -86,7 +84,6 @@ void  mcc_decode_cb(int frame)
             mcc_word_decode(&sample_buf16[i]);
         }
     }
-    // printf("end\n");
 }
 
 mcc_capture_config_t mcc_capture_config = {

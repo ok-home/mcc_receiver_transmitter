@@ -34,7 +34,8 @@
 
 #define TAG "esp32s3_ll"
 
-#include "mcc_capture_ll.h"
+#include "mcc_encoder.h"
+
 
 // if define external logic analyzer - define pin as gpio input
 // else - self diagnostic analyzer - define pin as defined on firmware + input to cam
@@ -44,7 +45,6 @@
 #else
 #undef SEPARATE_MODE_LOGIC_ANALIZER
 #endif
-static int g6 = 0;
 static intr_handle_t isr_handle;
 static int dma_num = 0;
 //  trigger isr handle -> start transfer
@@ -66,8 +66,6 @@ static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
 
     if (status.in_done)
     {
-        gpio_set_level(6,g6&1);
-        g6++;
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
 
