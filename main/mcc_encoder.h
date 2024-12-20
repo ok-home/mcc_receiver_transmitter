@@ -17,12 +17,12 @@
 
 #include "driver/rmt_types.h"
 
-
+/*-> rmt transmitter params*/
 #define RMT_TX_CLK  (80*1000*1000)  // 80 mHz APB CLK 
 #define RMT_BIT_WIDTH (1667)        // 80 000 000/48 0000 = 1666.66666666
 #define RMT_TX_PIN (4)              // transmitter GPIO
 #define TX_BLOCK_SYMBOL (64)        // RMT number of symbols per block
-
+/*-> 16chain receiver decoder params */
 #define BIN_SIZE (3)                // One bin == 3 received bits -> 2-3 bits per symbol, 1 bits noise
 #define TIME_SLOT_SIZE (BIN_SIZE * 16) // Time slot size in bin
 #define MCC_WORD_SIZE (TIME_SLOT_SIZE * 11) // 11 bins per time slot
@@ -31,7 +31,6 @@
 
 #define MCC_HW_DEFAULT_SAMPLE_RATE (144*1000) // 48000*3 receiver pclk onr bin  -> 3 bits per symbol
 #define MCC_HW_DEFAULT_CHANNELS  (16)       // already 16 channel on receive
-
 
 #define MCC_HW_CLK_SAMPLE_RATE (160*1000*1000)    // cam clock in Hz 
 //  GPIO limit on esp32s3 
@@ -101,8 +100,6 @@ typedef struct id_code
    uint32_t id;
    uint32_t code;
 } id_code_t;
-
-
 
     /**
      * @brief mcc capture callback
