@@ -24,6 +24,31 @@ static lldesc_t *mcc_frame_dma;
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
 static int mcc_capture_started = 0;              // flag start dma
 
+mcc_capture_buf_t sample_buf[2];
+
+extern uint16_t *decode_offset[16];
+
+void mcc_decode_cb(int frame)
+{
+    if (frame >= 0) // 2016
+    {
+        frame &= 1;
+        uint16_t *sample_buf16 = sample_buf[frame].buff;
+        memcpy((uint8_t *)sample_buf[frame ^ 1].rollback_buf, (uint8_t *)sample_buf[frame].to_rollback_buf, (TIME_SLOT_SIZE * 11) * 2);
+        for (int ch = 0; ch < 16; ch++)
+        {
+            // from previous buff
+            decode_offset[ch] = (decode_offset[ch] == NULL) ? NULL : decode_offset[ch] - sample_buf[frame ^ 1].to_rollback_buf + sample_buf[frame].buff;
+        }
+        for (int i = 0; i < DMA_FRAME / 2; i++)
+        {
+
+            mcc_word_decode(&sample_buf16[i]);
+        }
+    }
+}
+
+
 /**
  * @brief allocate dma descriptor
  *
@@ -83,16 +108,15 @@ void mcc_capture_stop(void)
  void IRAM_ATTR mcc_capture_task(void *arg)
 {
     int noTimeout;
-    mcc_capture_config_t *cfg = (mcc_capture_config_t *)arg;
     static int cnt = 0;
     while (1)
     {
-        noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); // portMAX_DELAY
+        noTimeout = ulTaskNotifyTake(pdFALSE, portMAX_DELAY); // portMAX_DELAY
         if (noTimeout == 1)                                                // dma data ready
         {
             // dma data ready
             //int64_t t0 = esp_timer_get_time();
-            cfg->mcc_capture_cb(cnt&1);
+            mcc_decode_cb(cnt&1);
             //int64_t t1 = esp_timer_get_time();
             //printf("time %lld\n",t1-t0);
             //            mcc_capture_stop();
@@ -100,18 +124,12 @@ void mcc_capture_stop(void)
        }
         else // timeout detected
         {
-            printf("err notimeout %d ------------------------\n",noTimeout);
+            printf("err decode time %d \n",noTimeout);
             //            cfg->mcc_capture_cb(-1); // timeout
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);
         }
-        //printf("notmo=%d cnt %d\n",noTimeout,cnt);
-        // debug - stop after 100 cb
         cnt++;
-        //if(cnt==10) {mcc_capture_ll_stop(); 
-        //cnt=0;
-        //printf("stop task\n");
-        //vTaskDelete(mcc_capture_task_handle);}
     }
 }
 /**
@@ -136,11 +154,6 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
         return ESP_ERR_INVALID_STATE;
     }
     mcc_capture_started = 1;
-    // check cb pointer
-    if (config->mcc_capture_cb == NULL)
-    {
-        goto _ret;
-    }
     // check GPIO num - 0-MAX_GPIO or num < 0 // todo use macros to legal pin definition // now it controlled from WS headers
     for (int i = 0; i < MCC_HW_DEFAULT_CHANNELS; i++)
     {
@@ -149,12 +162,8 @@ esp_err_t start_mcc_capture(mcc_capture_config_t *config)
             goto _ret;
         }
     }
-    if (config->buf0 == NULL || config->buf1 == NULL)
-    {
-        goto _ret;
-    }
     //  allocate dma descriptor buffer
-    mcc_frame.dma = allocate_dma_descriptors(config->buf0, config->buf1);
+    mcc_frame.dma = allocate_dma_descriptors((uint8_t *)sample_buf[0].dma_capture_start, (uint8_t *)sample_buf[1].dma_capture_start);
     if (mcc_frame.dma == NULL)
     {
         ret = ESP_ERR_NO_MEM;

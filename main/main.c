@@ -91,29 +91,6 @@ void rmt_mcc_word_transmit(mcc_code_word_tx_t mcc_tx_word)
     rmt_tx_wait_all_done(tx_chan_handle, portMAX_DELAY);
 }
 
-static mcc_capture_buf_t sample_buf[2] = {0};
-extern uint16_t *decode_offset[16];
-
-void mcc_decode_cb(int frame)
-{
-
-    if (frame >= 0) // 2016
-    {
-        frame &= 1;
-        uint16_t *sample_buf16 = sample_buf[frame].buff;
-        memcpy((uint8_t *)sample_buf[frame ^ 1].rollback_buf, (uint8_t *)sample_buf[frame].to_rollback_buf, (TIME_SLOT_SIZE * 11) * 2);
-        for (int ch = 0; ch < 16; ch++)
-        {
-            // from previous buff
-            decode_offset[ch] = (decode_offset[ch] == NULL) ? NULL : decode_offset[ch] - sample_buf[frame ^ 1].to_rollback_buf + sample_buf[frame].buff;
-        }
-        for (int i = 0; i < DMA_FRAME / 2; i++)
-        {
-
-            mcc_word_decode(&sample_buf16[i]);
-        }
-    }
-}
 
 mcc_capture_config_t mcc_capture_config = {
     .pin[0] = 4,
@@ -132,10 +109,7 @@ mcc_capture_config_t mcc_capture_config = {
     .pin[13] = 7,
     .pin[14] = 7,
     .pin[15] = 7,
-    .meashure_timeout = 200, // 200 millisek
-    .buf0 = (uint8_t *)sample_buf[0].dma_capture_start,
-    .buf1 = (uint8_t *)sample_buf[1].dma_capture_start,
-    .mcc_capture_cb = mcc_decode_cb};
+};
 
 // extern void test();
 QueueHandle_t mcc_rx_queue;
