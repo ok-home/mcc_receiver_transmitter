@@ -139,7 +139,6 @@ void mcc_capture_stop(void);
 
 typedef struct
 {
-    uint8_t *buf[2];
     lldesc_t *dma; // Pointer of dma frame
 } mcc_frame_t;
 

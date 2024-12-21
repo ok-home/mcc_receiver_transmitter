@@ -20,7 +20,6 @@
 
 // frame buff & dma descripter
 static mcc_frame_t mcc_frame ;
-static lldesc_t *mcc_frame_dma;
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
 static int mcc_capture_started = 0;              // flag start dma
 
