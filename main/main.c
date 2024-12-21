@@ -14,7 +14,7 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
 
-#include "mcc_encoder.h"
+#include "mcc_enc_dec.h"
 
 
 //static const char *TAG = "MCC TEST";

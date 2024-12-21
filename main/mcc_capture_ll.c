@@ -29,13 +29,13 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+#ifdef MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK
 #include "driver/ledc.h"
 #endif
 
 #define TAG "mcc_capture_ll"
 
-#include "mcc_encoder.h"
+#include "mcc_enc_dec.h"
 
 
 // if define external logic analyzer - define pin as gpio input
@@ -70,14 +70,14 @@ static void IRAM_ATTR mcc_ll_dma_isr(void *handle)
     }
 }
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+#ifdef MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK
 // for sample rate less then 1 MHz -> use ledc
 static void mcc_capture_ll_set_ledc_pclk(int sample_rate)
 {
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
+        .timer_num = MCC_ENC_DEC_LEDC_TIMER_NUMBER,
         .duty_resolution = LEDC_TIMER_4_BIT,
         .freq_hz = sample_rate, // Set output frequency at 5 kHz
         .clk_cfg = LEDC_AUTO_CLK};
@@ -86,10 +86,10 @@ static void mcc_capture_ll_set_ledc_pclk(int sample_rate)
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER,
-        .timer_sel = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
+        .channel = MCC_ENC_DEC_LEDC_CHANNEL_NUMBER,
+        .timer_sel = MCC_ENC_DEC_LEDC_TIMER_NUMBER,
         .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = CONFIG_ANALYZER_PCLK_PIN,
+        .gpio_num = MCC_ENC_DEC_PCLK_PIN,
         .duty = 8, // Set duty to 50%
         .hpoint = 0};
     ledc_channel_config(&ledc_channel);
@@ -100,10 +100,10 @@ int mcc_capture_ll_get_sample_rate(int sample_rate)
 {
     int ldiv = (MCC_HW_CLK_SAMPLE_RATE / sample_rate);
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+#ifdef MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK
     if (ldiv > 160)
     {
-        return ((int)ledc_get_freq(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
+        return ((int)ledc_get_freq(LEDC_LOW_SPEED_MODE, MCC_ENC_DEC_LEDC_TIMER_NUMBER));
     }
 #endif
     if (ldiv > 160)
@@ -121,12 +121,12 @@ static void mcc_capture_ll_set_clock(int sample_rate)
         ldiv = 160;
     }
     // clk out xclk -> pclk=clk
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
-    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode(CONFIG_ANALYZER_PCLK_PIN, GPIO_FLOATING);
-    gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[MCC_ENC_DEC_PCLK_PIN], PIN_FUNC_GPIO);
+    gpio_set_direction(MCC_ENC_DEC_PCLK_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(MCC_ENC_DEC_PCLK_PIN, GPIO_FLOATING);
+    gpio_matrix_out(MCC_ENC_DEC_PCLK_PIN, CAM_CLK_IDX, false, false);
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+#ifdef MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK
     if ((MCC_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
         ldiv = 8; // cam clk to 20 MHz
@@ -134,8 +134,8 @@ static void mcc_capture_ll_set_clock(int sample_rate)
     }
 #endif
     // input clk pin  -> pclk
-    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
-    gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[MCC_ENC_DEC_PCLK_PIN]);
+    gpio_matrix_in(MCC_ENC_DEC_PCLK_PIN, CAM_PCLK_IDX, false);
     // Configure clock divider
     LCD_CAM.cam_ctrl.cam_clkm_div_b = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_a = 0;
@@ -357,10 +357,10 @@ void mcc_capture_ll_stop()
     GDMA.channel[dma_num].in.int_clr.in_done = 1;
 
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
+#ifdef MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK
+    ledc_stop(LEDC_LOW_SPEED_MODE, MCC_ENC_DEC_LEDC_CHANNEL_NUMBER, 0);
 #endif
-    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
+    gpio_set_direction(MCC_ENC_DEC_PCLK_PIN, GPIO_MODE_DISABLE);
 }
 
 esp_err_t mcc_capture_ll_init_dma_eof_isr(TaskHandle_t task)

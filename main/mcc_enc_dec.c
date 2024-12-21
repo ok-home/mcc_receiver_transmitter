@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mcc_encoder.h"
+#include "mcc_enc_dec.h"
 
 
 extern id_code_t miles_id_sort[];

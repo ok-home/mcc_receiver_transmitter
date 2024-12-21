@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
@@ -56,10 +54,10 @@
 #define MCC_PIN_15 (-1)
 
 // for the receiver to work you need 1 free gpio and 1 leds timer channel
-#define CONFIG_ANALYZER_PCLK_PIN (40) // free GPIO, check that it is not connected anywhere
-#define CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK // use ledc timer for pclk
-#define CONFIG_ANALYZER_LEDC_TIMER_NUMBER (3)   //ledc timer number
-#define CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER (7) //ledc channel number
+#define MCC_ENC_DEC_PCLK_PIN (40) // free GPIO, check that it is not connected anywhere
+#define MCC_ENC_DEC_USE_LEDC_TIMER_FOR_PCLK // use ledc timer for pclk
+#define MCC_ENC_DEC_LEDC_TIMER_NUMBER (3)   //ledc timer number
+#define MCC_ENC_DEC_LEDC_CHANNEL_NUMBER (7) //ledc channel number
 
 // on test mode -> undefine CONFIG_ANALYZER_SEPARATE_MODE
 // on production mode -> define CONFIG_ANALYZER_SEPARATE_MODE

@@ -12,7 +12,7 @@
 #include "esp_log.h"
 #include "string.h"
 
-#include "mcc_encoder.h"
+#include "mcc_enc_dec.h"
 
 #include "esp_timer.h"
 
