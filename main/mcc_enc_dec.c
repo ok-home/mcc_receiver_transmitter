@@ -10,6 +10,8 @@ extern id_code_t miles_id_sort[];
 extern id_code_t miles_code_sort[];
 extern id_code_t spid_id_code_sort[];
 
+extern QueueHandle_t mcc_rx_queue;
+
 uint16_t *decode_offset[16] = {0};
 
 // comparator for binsearch
@@ -22,13 +24,16 @@ static int id_code_compare(const void *a, const void *b)
 // mcc word decode one channel bit to bit
 void mcc_word_decode( uint16_t *ptr)
 {
+   mcc_code_word_rx_t result;
    for (uint32_t channel = 0; channel < 16; channel++)
    {
+ 
       uint32_t y_mode = 0;
       uint32_t z_mode = 0;
       uint32_t yz_mode = 0;
       uint32_t miles = 0;
       uint32_t spid = 0;
+
       //uint16_t *ptr = ptr; // channel_array[channel].decode_bit_offset;
 
       if (ptr <= decode_offset[channel])
@@ -91,7 +96,14 @@ void mcc_word_decode( uint16_t *ptr)
          printf("err spid\n");
          continue;
       }
-      printf("id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, yz_mode, id_spid->id);
+//      printf("id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, yz_mode, id_spid->id);
+
+      result.miles = id_miles->id;
+      result.spid = id_spid->id;
+      result.yz_mod = yz_mode;
+      result.channel = channel;
+      xQueueSend(mcc_rx_queue,&result,0);
+
       decode_offset[channel] = ptr + MCC_WORD_SIZE - TIME_SLOT_SIZE;
       continue;
    }
@@ -105,7 +117,7 @@ static uint16_t mcc_get_spid_code(uint16_t spi)
    return spid_id_code_sort[spi].code; // 100 0000 0111
 }
 // encode mcc word to  rmt words
-void rmt_mcc_word_encode(mcc_code_word_t *mcc_word, rmt_mcc_word_t *rmt_word)
+void rmt_mcc_word_encode(mcc_code_word_tx_t *mcc_word, rmt_mcc_word_t *rmt_word)
 {
    // clear all bits
    uint16_t miles = mcc_get_miles_code(mcc_word->miles);
@@ -162,3 +174,4 @@ void rmt_mcc_word_encode(mcc_code_word_t *mcc_word, rmt_mcc_word_t *rmt_word)
       }
    }
 }
+

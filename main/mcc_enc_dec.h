@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "esp_heap_caps.h"
 #include <driver/gpio.h>
 #include "hal/gpio_types.h"
@@ -87,11 +88,22 @@ typedef  union {
     uint16_t buff[DMA_FRAME/2+TIME_SLOT_SIZE*11];
 } mcc_capture_buf_t;
 
-typedef struct mcc_code_word {
+typedef struct mcc_code_word_tx {
         uint16_t miles;
         uint16_t spid;
         uint8_t yz_mod;
-} mcc_code_word_t;
+        uint8_t loop_count;
+        uint16_t delay_mks;
+} mcc_code_word_tx_t;
+
+typedef struct mcc_code_word_rx {
+        uint16_t miles;
+        uint16_t spid;
+        uint8_t yz_mod;
+        uint8_t channel;
+} mcc_code_word_rx_t;
+
+
 // key/value maps struct for encode decode maps miles & spid
 typedef struct id_code
 {
@@ -186,5 +198,5 @@ typedef struct id_code
 // mcc word decode one channel bit to bit
 void mcc_word_decode( uint16_t *ptr);
 // encode mcc word to  rmt words
-void rmt_mcc_word_encode(mcc_code_word_t* mcc_word, rmt_mcc_word_t* rmt_word);
+void rmt_mcc_word_encode(mcc_code_word_tx_t* mcc_word, rmt_mcc_word_t* rmt_word);
 

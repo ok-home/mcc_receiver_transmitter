@@ -607,7 +607,7 @@ static uint16_t mcc_get_spid_code(uint16_t spi)
    return spid_id_code_sort[spi].code; // 100 0000 0111
 }
 // encode mcc word to  rmt words
-void rmt_mcc_word_encode(mcc_code_word_t *mcc_word, rmt_mcc_word_t *rmt_word)
+void rmt_mcc_word_encode(mcc_code_word_tx_t *mcc_word, rmt_mcc_word_t *rmt_word)
 {
    // clear all bits
    uint16_t miles = mcc_get_miles_code(mcc_word->miles);
