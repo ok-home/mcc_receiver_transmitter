@@ -111,7 +111,6 @@ mcc_capture_config_t mcc_capture_config = {
     .pin[15] = 7,
 };
 
-// extern void test();
 QueueHandle_t mcc_rx_queue;
 
 void mcc_receive_task(void *p)
