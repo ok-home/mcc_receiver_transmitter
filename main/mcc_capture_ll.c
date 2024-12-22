@@ -42,9 +42,9 @@
 // else - self diagnostic analyzer - define pin as defined on firmware + input to cam
 
 #ifdef CONFIG_ANALYZER_SEPARATE_MODE
-#define SEPARATE_MODE_LOGIC_ANALIZER
+#define MCC_CONNECT_IR_GPIO
 #else
-#undef SEPARATE_MODE_LOGIC_ANALIZER
+#undef MCC_CONNECT_IR_GPIO
 #endif
 static intr_handle_t isr_handle;
 static int dma_num = 0;
@@ -191,7 +191,7 @@ static void mcc_capture_ll_set_pin(int *data_pins, int channels)
 {
     // vTaskDelay(5); //??
 
-#ifndef SEPARATE_MODE_LOGIC_ANALIZER
+#ifndef MCC_CONNECT_IR_GPIO
 
     for (int i = 0; i < channels; i++)
     {

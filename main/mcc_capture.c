@@ -143,7 +143,7 @@ void mcc_capture_stop(void)
  *     - ESP_ERR_INVALID_STATE  mcc_capture already working
  *     - ESP_FAIL               Initialize fail
  */
-esp_err_t start_mcc_capture(mcc_capture_config_t *config)
+esp_err_t start_mcc_receive_loop(mcc_capture_config_t *config)
 {
     esp_err_t ret = 0;
 

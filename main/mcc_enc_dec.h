@@ -16,6 +16,8 @@
 
 #include "driver/rmt_types.h"
 
+#include "mcc_rx_tx.h"
+
 /*-> rmt transmitter params*/
 #define RMT_TX_CLK (80 * 1000 * 1000) // 80 mHz APB CLK
 #define RMT_BIT_WIDTH (1667)          // 80 000 000/48 0000 = 1666.66666666
@@ -36,23 +38,7 @@
 #define MCC_HW_MIN_GPIO -1 // not connected
 #define MCC_HW_MAX_GPIO 48 // max GPIO
 
-//  GPIO conected to IR sensor
-#define MCC_PIN_0 (-1)
-#define MCC_PIN_1 (-1)
-#define MCC_PIN_2 (-1)
-#define MCC_PIN_3 (-1)
-#define MCC_PIN_4 (-1)
-#define MCC_PIN_5 (-1)
-#define MCC_PIN_6 (-1)
-#define MCC_PIN_7 (-1)
-#define MCC_PIN_8 (-1)
-#define MCC_PIN_9 (-1)
-#define MCC_PIN_10 (-1)
-#define MCC_PIN_11 (-1)
-#define MCC_PIN_12 (-1)
-#define MCC_PIN_13 (-1)
-#define MCC_PIN_14 (-1)
-#define MCC_PIN_15 (-1)
+
 
 // for the receiver to work you need 1 free gpio and 1 leds timer channel
 #define MCC_ENC_DEC_PCLK_PIN (40)           // free GPIO, check that it is not connected anywhere
@@ -92,22 +78,7 @@ typedef union
     uint16_t buff[DMA_FRAME / 2 + TIME_SLOT_SIZE * 11];
 } mcc_capture_buf_t;
 
-typedef struct mcc_code_word_tx
-{
-    uint16_t miles;
-    uint16_t spid;
-    uint8_t yz_mod;
-    uint8_t loop_count;
-    uint16_t delay_mks;
-} mcc_code_word_tx_t;
 
-typedef struct mcc_code_word_rx
-{
-    uint16_t miles;
-    uint16_t spid;
-    uint8_t yz_mod;
-    uint8_t channel;
-} mcc_code_word_rx_t;
 
 // key/value maps struct for encode decode maps miles & spid
 typedef struct id_code
@@ -116,24 +87,9 @@ typedef struct id_code
     uint32_t code;
 } id_code_t;
 
-typedef struct
-{
-    int pin[16]; // GPIO pin ESP32=>(0-39) ESP32S3=>(0-48) , -1 - disable , on 8bit mode use lower 8 pin [0,7]
-} mcc_capture_config_t;
 
-/**
- * @brief Start mcc capture
- *
- * @param config Configurations - see mcc_capture_config_t struct
- *
- * @return
- *     - ESP_OK                 Success
- *     - ESP_ERR_INVALID_ARG    Parameter error
- *     - ESP_ERR_NO_MEM         No memory to initialize mcc_capture
- *     - ESP_ERR_INVALID_STATE  mcc_capture already working
- *     - ESP_FAIL               Initialize fail
- */
-esp_err_t start_mcc_capture(mcc_capture_config_t *config);
+
+
 
 void mcc_capture_stop(void);
 
@@ -186,7 +142,8 @@ void mcc_capture_ll_deinit_dma_eof_isr();
  */
 int mcc_capture_ll_get_sample_rate(int sample_rate);
 
-// mcc word decode one channel bit to bit
+// mcc word decode 16 bit to bit 
+// decoded data return to queue with mcc_code_word_rx_t format
 void mcc_word_decode(uint16_t *ptr);
 // encode mcc word to  rmt words
 void rmt_mcc_word_encode(mcc_code_word_tx_t *mcc_word, rmt_mcc_word_t *rmt_word);

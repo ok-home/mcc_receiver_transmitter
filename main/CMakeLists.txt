@@ -5,6 +5,7 @@ idf_component_register(
             "mcc_code_maps.c"
             "mcc_capture.c"
             "mcc_capture_ll.c"
+            "mcc_transmit.c"
         INCLUDE_DIRS 
             "."
 )

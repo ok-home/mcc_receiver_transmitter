@@ -10,7 +10,7 @@ extern id_code_t miles_id_sort[];
 extern id_code_t miles_code_sort[];
 extern id_code_t spid_id_code_sort[];
 
-extern QueueHandle_t mcc_rx_queue;
+extern QueueHandle_t MCC_RX_QUEUE_NAME;
 
 uint16_t *decode_offset[16] = {0};
 
@@ -102,7 +102,7 @@ void mcc_word_decode( uint16_t *ptr)
       result.spid = id_spid->id;
       result.yz_mod = yz_mode;
       result.channel = channel;
-      xQueueSend(mcc_rx_queue,&result,0);
+      xQueueSend(MCC_RX_QUEUE_NAME,&result,0);
 
       decode_offset[channel] = ptr + MCC_WORD_SIZE - TIME_SLOT_SIZE;
       continue;
