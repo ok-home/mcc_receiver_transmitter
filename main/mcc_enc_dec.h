@@ -46,9 +46,9 @@
 #define MCC_ENC_DEC_LEDC_TIMER_NUMBER (3)   // ledc timer number
 #define MCC_ENC_DEC_LEDC_CHANNEL_NUMBER (7) // ledc channel number
 
-// on test mode -> undefine CONFIG_ANALYZER_SEPARATE_MODE
-// on production mode -> define CONFIG_ANALYZER_SEPARATE_MODE
-// #define CONFIG_ANALYZER_SEPARATE_MODE
+// on test mode -> undefine MCC_CONNECT_IR_GPIO
+// on production mode -> define MCC_CONNECT_IR_GPIO
+// #define MCC_CONNECT_IR_GPIO
 
 // rmt encoder timeslot struct
 typedef struct rmt_mcc_timeslot
