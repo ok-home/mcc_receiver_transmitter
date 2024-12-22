@@ -19,5 +19,6 @@
 - Initializes receiver
 - Transmitter sends packet - > 2 * MCC word / 1600 µs pause / 4 * MCC word / 5 sec pause
 - The receiver receives data from the queue and sends it to console
+- Test receiver connect to 0,2 channel (may be changed on mcc_rx_tx.h)
 
 ## Example tested on ESP-IDF 5.3.1, should work on 5.2.X and above.

@@ -9,7 +9,7 @@
 
 //  GPIO conected to IR sensor
 #define MCC_PIN_0 (4)
-#define MCC_PIN_1 (4)
+#define MCC_PIN_1 (-1)
 #define MCC_PIN_2 (4)
 #define MCC_PIN_3 (-1)
 #define MCC_PIN_4 (-1)
