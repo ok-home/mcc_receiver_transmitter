@@ -494,7 +494,6 @@ int  mcc_word_decode(uint8_t channel, uint8_t bit)
    if (data->cnt_last_bit >= 3)
    {
       uint8_t bit_val = data->last_bit > 1 ? 1 : 0;
-      //printf("bin=%d last=%d cnt=%d\n",bit_val,data->last_bit,data->cnt_last_bit);
       switch (data->cnt_bins)
       {
       case 0: // first bin in timeslot

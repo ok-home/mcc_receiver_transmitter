@@ -18,8 +18,8 @@
 #include "mcc_enc_dec.h"
 #include "mcc_rx_tx.h"
 
-// static const char *TAG = "MCC TEST";
-
+static const char *TAG = "MCC";
+// pin definition on include/mcc_rx_tx.h
 mcc_capture_config_t mcc_capture_config = {
     .pin[0] = MCC_PIN_0,
     .pin[1] = MCC_PIN_1,
@@ -50,7 +50,7 @@ void mcc_receive_task(void *p)
     while (1)
     {
         xQueueReceive(MCC_RX_QUEUE_NAME, &result, portMAX_DELAY);
-        printf("receive->channel = %d miles = %d yz=%x spid=%d\n", result.channel, result.miles, result.yz_mod, result.spid);
+        ESP_LOGI(TAG,"receive->channel = %d miles = %d yz=%x spid=%d", result.channel, result.miles, result.yz_mod, result.spid);
     }
 }
 void app_main(void)
@@ -83,6 +83,6 @@ void app_main(void)
         rmt_mcc_word_transmit_data(tst_word); //transmit 4 * 10.96.126 word 
 
         vTaskDelay(500); // delay 5 sek
-        printf("\n");
+        ESP_LOGI(TAG,"next packet");
     }
 }

@@ -46,7 +46,6 @@ void rmt_mcc_tx_task(void *p)
     {
         ESP_ERROR_CHECK(rmt_transmit(tx_chan_handle, tx_encoder, &rmt_word, sizeof(rmt_word), &rmt_tx_config));
         rmt_tx_wait_all_done(tx_chan_handle, portMAX_DELAY);
-        printf("done\n");
         vTaskDelay(500);
     }
 }

@@ -13,6 +13,7 @@
 #include "soc/gpio_reg.h"
 #include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
+#include "esp_log.h"
 
 #include "driver/rmt_types.h"
 

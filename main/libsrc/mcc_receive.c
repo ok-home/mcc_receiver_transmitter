@@ -18,6 +18,8 @@
 
 #define MCC_TASK_STACK 2048
 
+#define TAG "mcc_receive"
+
 // frame buff & dma descripter
 static mcc_frame_t mcc_frame ;
 static TaskHandle_t mcc_capture_task_handle = 0; // main task handle
@@ -123,7 +125,7 @@ void mcc_capture_stop(void)
        }
         else // timeout detected
         {
-            printf("err decode time %d \n",noTimeout);
+            ESP_LOGE(TAG,"err decode time %d",noTimeout);
             //            cfg->mcc_capture_cb(-1); // timeout
             //            mcc_capture_stop();
             //            vTaskDelete(mcc_capture_task_handle);

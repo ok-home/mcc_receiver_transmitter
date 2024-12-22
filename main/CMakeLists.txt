@@ -1,11 +1,13 @@
 idf_component_register( 
         SRCS 
             "main.c" 
-            "mcc_enc_dec.c" 
-            "mcc_code_maps.c"
-            "mcc_capture.c"
-            "mcc_capture_ll.c"
-            "mcc_transmit.c"
+            "libsrc/mcc_enc_dec.c" 
+            "libsrc/mcc_code_maps.c"
+            "libsrc/mcc_receive.c"
+            "libsrc/mcc_receive_ll.c"
+            "libsrc/mcc_transmit.c"
         INCLUDE_DIRS 
-            "."
+            "include"
+        PRIV_INCLUDE_DIRS
+            "private_include"
 )

@@ -5,6 +5,7 @@
 
 #include "mcc_enc_dec.h"
 
+#define TAG "mcc_decoder"
 
 extern id_code_t miles_id_sort[];
 extern id_code_t miles_code_sort[];
@@ -62,7 +63,7 @@ void mcc_word_decode( uint16_t *ptr)
       id_code_t *id_miles = (id_code_t *)bsearch(&code_miles, miles_code_sort, 38, sizeof(id_code_t), id_code_compare);
       if (id_miles == 0)
       {
-         printf("err miles\n");
+         ESP_LOGE(TAG,"miles not found");
          continue;
       }
 
@@ -93,10 +94,10 @@ void mcc_word_decode( uint16_t *ptr)
       id_code_t *id_spid = (id_code_t *)bsearch(&code_spid, spid_id_code_sort, 331, sizeof(id_code_t), id_code_compare);
       if (id_spid == 0)
       {
-         printf("err spid\n");
+         ESP_LOGE(TAG,"spid not found");
          continue;
       }
-//      printf("id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, yz_mode, id_spid->id);
+//      ESP_LOGI(TAG,"id_miles = %ld yz=%lx id_spid=%ld\n", id_miles->id, yz_mode, id_spid->id);
 
       result.miles = id_miles->id;
       result.spid = id_spid->id;
